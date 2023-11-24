@@ -371,3 +371,15 @@ scan: scan-govulncheck
 .PHONY: scan-govulncheck
 scan-govulncheck: gotool.govulncheck
 	govulncheck ./...
+
+generate_genesis_block: FABRIC_CFG_PATH = $(abspath $(@D))/config_dev
+generate_genesis_block: configtxgen
+	./build/bin/configtxgen -profile SampleDevModeSolo -channelID syschannel -outputBlock genesisblock -configPath "$(FABRIC_CFG_PATH)" -outputBlock "$(FABRIC_CFG_PATH)"/genesisblock
+
+peer_dev: GO_LDFLAGS = $(METADATA_VAR:%=-X $(PKGNAME)/common/metadata.%)
+peer_dev:
+	FABRIC_CFG_PATH=$(abspath $(@D))/config_dev GOBIN=$(abspath $(@D)) gow run -tags "$(GO_TAGS)" -ldflags "$(GO_LDFLAGS)" -buildvcs=false $(pkgmap.peer) node start
+
+orderer_dev: GO_LDFLAGS = $(METADATA_VAR:%=-X $(PKGNAME)/common/metadata.%)
+orderer_dev:
+	FABRIC_CFG_PATH=$(abspath $(@D))/config_dev GOBIN=$(abspath $(@D)) gow run -tags "$(GO_TAGS)" -ldflags "$(GO_LDFLAGS)" -buildvcs=false $(pkgmap.orderer) start

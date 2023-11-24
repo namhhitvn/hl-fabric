@@ -25,3 +25,8 @@ TESTS*.xml
 .tox/
 .vagrant/
 .vscode
+
+#
+.tmp
+integration
+config_dev
