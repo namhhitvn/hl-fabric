@@ -31,8 +31,8 @@ var (
 type closeFunc func()
 
 type Conf struct {
-	DBPath         string
-	ExpectedFormat string
+	DBPath           string
+	ExpectedFormat   string
 	KeyValueDBConfig *ledger.KeyValueDBConfig
 }
 

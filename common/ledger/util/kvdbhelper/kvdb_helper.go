@@ -6,12 +6,12 @@ import (
 	"syscall"
 
 	"github.com/hyperledger/fabric/common/flogging"
+	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
 	"github.com/hyperledger/fabric/internal/fileutil"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/opt"
-	goleveldbutil "github.com/syndtr/goleveldb/leveldb/util"
 )
 
 var logger = flogging.MustGetLogger("kvdbhelper")
@@ -26,7 +26,7 @@ const (
 // DB - a wrapper on an actual store
 type DB struct {
 	conf    *Conf
-	db      *leveldb.DB
+	leveldb *leveldbhelper.DB
 	dbState dbState
 	mutex   sync.RWMutex
 
@@ -43,7 +43,11 @@ func CreateDB(conf *Conf) *DB {
 	writeOptsSync.Sync = true
 
 	return &DB{
-		conf:            conf,
+		conf: conf,
+		leveldb: leveldbhelper.CreateDB(&leveldbhelper.Conf{
+			DBPath:         conf.DBPath,
+			ExpectedFormat: conf.ExpectedFormat,
+		}),
 		dbState:         closed,
 		readOpts:        readOpts,
 		writeOptsNoSync: writeOptsNoSync,
@@ -58,17 +62,7 @@ func (dbInst *DB) Open() {
 	if dbInst.dbState == opened {
 		return
 	}
-	dbOpts := &opt.Options{}
-	dbPath := dbInst.conf.DBPath
-	var err error
-	var dirEmpty bool
-	if dirEmpty, err = fileutil.CreateDirIfMissing(dbPath); err != nil {
-		panic(fmt.Sprintf("Error creating dir if missing: %s", err))
-	}
-	dbOpts.ErrorIfMissing = !dirEmpty
-	if dbInst.db, err = leveldb.OpenFile(dbPath, dbOpts); err != nil {
-		panic(fmt.Sprintf("Error opening leveldb: %s", err))
-	}
+	dbInst.leveldb.Open()
 	dbInst.dbState = opened
 }
 
@@ -76,11 +70,7 @@ func (dbInst *DB) Open() {
 func (dbInst *DB) IsEmpty() (bool, error) {
 	dbInst.mutex.RLock()
 	defer dbInst.mutex.RUnlock()
-	itr := dbInst.db.NewIterator(&goleveldbutil.Range{}, dbInst.readOpts)
-	defer itr.Release()
-	hasItems := itr.Next()
-	return !hasItems,
-		errors.Wrapf(itr.Error(), "error while trying to see if the leveldb at path [%s] is empty", dbInst.conf.DBPath)
+	return dbInst.leveldb.IsEmpty()
 }
 
 // Close closes the underlying db
@@ -90,9 +80,7 @@ func (dbInst *DB) Close() {
 	if dbInst.dbState == closed {
 		return
 	}
-	if err := dbInst.db.Close(); err != nil {
-		logger.Errorf("Error closing leveldb: %s", err)
-	}
+	dbInst.leveldb.Close()
 	dbInst.dbState = closed
 }
 
@@ -100,48 +88,21 @@ func (dbInst *DB) Close() {
 func (dbInst *DB) Get(key []byte) ([]byte, error) {
 	dbInst.mutex.RLock()
 	defer dbInst.mutex.RUnlock()
-	value, err := dbInst.db.Get(key, dbInst.readOpts)
-	if err == leveldb.ErrNotFound {
-		value = nil
-		err = nil
-	}
-	if err != nil {
-		logger.Errorf("Error retrieving leveldb key [%#v]: %s", key, err)
-		return nil, errors.Wrapf(err, "error retrieving leveldb key [%#v]", key)
-	}
-	return value, nil
+	return dbInst.leveldb.Get(key)
 }
 
 // Put saves the key/value
 func (dbInst *DB) Put(key []byte, value []byte, sync bool) error {
 	dbInst.mutex.RLock()
 	defer dbInst.mutex.RUnlock()
-	wo := dbInst.writeOptsNoSync
-	if sync {
-		wo = dbInst.writeOptsSync
-	}
-	err := dbInst.db.Put(key, value, wo)
-	if err != nil {
-		logger.Errorf("Error writing leveldb key [%#v]", key)
-		return errors.Wrapf(err, "error writing leveldb key [%#v]", key)
-	}
-	return nil
+	return dbInst.leveldb.Put(key, value, sync)
 }
 
 // Delete deletes the given key
 func (dbInst *DB) Delete(key []byte, sync bool) error {
 	dbInst.mutex.RLock()
 	defer dbInst.mutex.RUnlock()
-	wo := dbInst.writeOptsNoSync
-	if sync {
-		wo = dbInst.writeOptsSync
-	}
-	err := dbInst.db.Delete(key, wo)
-	if err != nil {
-		logger.Errorf("Error deleting leveldb key [%#v]", key)
-		return errors.Wrapf(err, "error deleting leveldb key [%#v]", key)
-	}
-	return nil
+	return dbInst.leveldb.Delete(key, sync)
 }
 
 // GetIterator returns an iterator over key-value store. The iterator should be released after the use.
@@ -150,21 +111,14 @@ func (dbInst *DB) Delete(key []byte, sync bool) error {
 func (dbInst *DB) GetIterator(startKey []byte, endKey []byte) iterator.Iterator {
 	dbInst.mutex.RLock()
 	defer dbInst.mutex.RUnlock()
-	return dbInst.db.NewIterator(&goleveldbutil.Range{Start: startKey, Limit: endKey}, dbInst.readOpts)
+	return dbInst.leveldb.GetIterator(startKey, startKey)
 }
 
 // WriteBatch writes a batch
 func (dbInst *DB) WriteBatch(batch *leveldb.Batch, sync bool) error {
 	dbInst.mutex.RLock()
 	defer dbInst.mutex.RUnlock()
-	wo := dbInst.writeOptsNoSync
-	if sync {
-		wo = dbInst.writeOptsSync
-	}
-	if err := dbInst.db.Write(batch, wo); err != nil {
-		return errors.Wrap(err, "error writing batch to leveldb")
-	}
-	return nil
+	return dbInst.leveldb.WriteBatch(batch, sync)
 }
 
 // FileLock encapsulate the DB that holds the file lock.

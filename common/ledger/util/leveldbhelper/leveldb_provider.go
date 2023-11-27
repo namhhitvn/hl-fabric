@@ -12,7 +12,6 @@ import (
 	"sync"
 
 	"github.com/hyperledger/fabric/common/ledger/dataformat"
-	"github.com/hyperledger/fabric/core/ledger"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
@@ -46,7 +45,6 @@ type closeFunc func()
 type Conf struct {
 	DBPath         string
 	ExpectedFormat string
-	KeyValueDBConfig *ledger.KeyValueDBConfig
 }
 
 // Provider enables to use a single leveldb as multiple logical leveldbs
