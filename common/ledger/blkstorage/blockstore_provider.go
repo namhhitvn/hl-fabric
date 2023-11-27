@@ -65,6 +65,7 @@ func NewProvider(conf *Conf, indexConfig *IndexConfig, metricsProvider metrics.P
 	dbConf := &leveldbhelper.Conf{
 		DBPath:         conf.getIndexDir(),
 		ExpectedFormat: dataFormatVersion(indexConfig),
+		KeyValueDBConfig: conf.keyValueDBConfig,
 	}
 
 	p, err := leveldbhelper.NewProvider(dbConf)

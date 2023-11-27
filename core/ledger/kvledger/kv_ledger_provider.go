@@ -143,6 +143,7 @@ func (p *Provider) initBlockStoreProvider() error {
 		blkstorage.NewConf(
 			BlockStorePath(p.initializer.Config.RootFSPath),
 			maxBlockFileSize,
+			p.initializer.Config.KeyValueDBConfig,
 		),
 		indexConfig,
 		p.initializer.MetricsProvider,

@@ -46,6 +46,11 @@ func ledgerConfig() *ledger.Config {
 		purgedKeyAuditLogging = viper.GetBool("ledger.pvtdataStore.purgedKeyAuditLogging")
 	}
 
+	KeyValueDatabase := ledger.GoLevelDB
+	if viper.IsSet("ledger.keyValueDBConfig.KeyValueDatabase") {
+		KeyValueDatabase = viper.GetString("ledger.keyValueDBConfig.KeyValueDatabase")
+	}
+
 	fsPath := coreconfig.GetPath("peer.fileSystemPath")
 	ledgersDataRootDir := filepath.Join(fsPath, "ledgersData")
 	snapshotsRootDir := viper.GetString("ledger.snapshots.rootDir")
@@ -71,6 +76,19 @@ func ledgerConfig() *ledger.Config {
 		SnapshotsConfig: &ledger.SnapshotsConfig{
 			RootDir: snapshotsRootDir,
 		},
+		KeyValueDBConfig: &ledger.KeyValueDBConfig{
+			KeyValueDatabase: KeyValueDatabase,
+		},
+	}
+
+	if conf.KeyValueDBConfig.KeyValueDatabase == ledger.CassandraDB {
+		conf.KeyValueDBConfig.CassandraDB = &ledger.CassandraDBConfig{
+			Hosts: viper.GetStringSlice("ledger.keyValueDBConfig.cassandraDBConfig.hosts"),
+			Keyspace: viper.GetString("ledger.keyValueDBConfig.cassandraDBConfig.keyspace"),
+			// TODO: mapping all cassandra db configs
+		}
+	} else {
+		conf.KeyValueDBConfig.KeyValueDatabase = ledger.GoLevelDB
 	}
 
 	if conf.StateDBConfig.StateDatabase == ledger.CouchDB {

@@ -11,6 +11,7 @@ import (
 	"hash"
 	"time"
 
+	gocql "github.com/gocql/gocql"
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric-lib-go/healthz"
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -25,6 +26,7 @@ import (
 const (
 	GoLevelDB = "goleveldb"
 	CouchDB   = "CouchDB"
+	CassandraDB   = "CassandraDB"
 )
 
 // Initializer encapsulates dependencies for PeerLedgerProvider
@@ -52,7 +54,23 @@ type Config struct {
 	HistoryDBConfig *HistoryDBConfig
 	// SnapshotsConfig holds the configuration parameters for the snapshots.
 	SnapshotsConfig *SnapshotsConfig
+	// KeyValueDBConfig holds the configuration parameters for key value storage for the ledger.
+	KeyValueDBConfig *KeyValueDBConfig
 }
+
+// KeyValueDBConfig is a structure used to configure the key value storage for the ledger.
+type KeyValueDBConfig struct {
+	// KeyValueDatabase is the database to use for storing tx logs and world state.  The
+	// two supported options are "goleveldb" and "CassandraDB".
+	KeyValueDatabase string
+
+	// CassandraDB is the configuration for CassandraDB.  It is used when KeyValueDatabase
+	// is set to "CassandraDB".
+	CassandraDB *CassandraDBConfig
+}
+
+// CassandraDB is a structure used to configure a CassandraInstance.
+type CassandraDBConfig gocql.ClusterConfig
 
 // StateDBConfig is a structure used to configure the state parameters for the ledger.
 type StateDBConfig struct {

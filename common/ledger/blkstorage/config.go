@@ -6,7 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 package blkstorage
 
-import "path/filepath"
+import (
+	"path/filepath"
+
+	"github.com/hyperledger/fabric/core/ledger"
+)
 
 const (
 	// ChainsDir is the name of the directory containing the channel ledgers.
@@ -20,15 +24,22 @@ const (
 type Conf struct {
 	blockStorageDir  string
 	maxBlockfileSize int
+	keyValueDBConfig *ledger.KeyValueDBConfig
 }
 
 // NewConf constructs new `Conf`.
 // blockStorageDir is the top level folder under which `BlockStore` manages its data
-func NewConf(blockStorageDir string, maxBlockfileSize int) *Conf {
+func NewConf(blockStorageDir string, maxBlockfileSize int, keyValueDBConfigs ...*ledger.KeyValueDBConfig) *Conf {
+	kvDBConfig := &ledger.KeyValueDBConfig{
+		KeyValueDatabase: ledger.GoLevelDB,
+	}
+	if len(keyValueDBConfigs) > 0 {
+		kvDBConfig = keyValueDBConfigs[0]
+	}
 	if maxBlockfileSize <= 0 {
 		maxBlockfileSize = defaultMaxBlockfileSize
 	}
-	return &Conf{blockStorageDir, maxBlockfileSize}
+	return &Conf{blockStorageDir, maxBlockfileSize, kvDBConfig}
 }
 
 func (conf *Conf) getIndexDir() string {
