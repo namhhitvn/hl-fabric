@@ -12,6 +12,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/opt"
+	goleveldbutil "github.com/syndtr/goleveldb/leveldb/util"
 )
 
 var logger = flogging.MustGetLogger("kvdbhelper")
@@ -111,7 +112,7 @@ func (dbInst *DB) Delete(key []byte, sync bool) error {
 func (dbInst *DB) GetIterator(startKey []byte, endKey []byte) iterator.Iterator {
 	dbInst.mutex.RLock()
 	defer dbInst.mutex.RUnlock()
-	return dbInst.leveldb.GetIterator(startKey, startKey)
+	return dbInst.leveldb.DB.NewIterator(&goleveldbutil.Range{Start: startKey, Limit: endKey}, dbInst.readOpts)
 }
 
 // WriteBatch writes a batch
