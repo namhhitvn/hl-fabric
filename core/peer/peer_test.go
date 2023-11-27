@@ -402,3 +402,52 @@ func TestGetApplicationConfig2(t *testing.T) {
 	require.True(t, ok)
 	require.NotNil(t, chanConf)
 }
+
+func TestChannel(t *testing.T) {
+	peerInstance, cleanup := NewTestPeer(t)
+	defer cleanup()
+
+	cid := "1"
+
+	channel := peerInstance.Channel(cid)
+	require.Nil(t, channel)
+}
+
+func TestChannel2(t *testing.T) {
+	peerInstance, cleanup := NewTestPeer(t)
+	defer cleanup()
+
+	var initArg string
+	peerInstance.Initialize(
+		func(cid string) { initArg = cid },
+		nil,
+		plugin.MapBasedMapper(map[string]validation.PluginFactory{}),
+		&ledgermocks.DeployedChaincodeInfoProvider{},
+		nil,
+		nil,
+		runtime.NumCPU(),
+	)
+
+	testChannelID := fmt.Sprintf("mytestchannelid-%d", rand.Int())
+	block, err := configtxtest.MakeGenesisBlock(testChannelID)
+	if err != nil {
+		fmt.Printf("Failed to create a config block, err %s\n", err)
+		t.FailNow()
+	}
+
+	err = peerInstance.CreateChannel(
+		testChannelID,
+		block,
+		&ledgermocks.DeployedChaincodeInfoProvider{},
+		nil,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("failed to create chain %s", err)
+	}
+	require.Equal(t, testChannelID, initArg)
+
+	// channel
+	channel := peerInstance.Channel(testChannelID)
+	require.NotNil(t, channel)
+}
