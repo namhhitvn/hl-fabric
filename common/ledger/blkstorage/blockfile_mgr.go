@@ -17,7 +17,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric-protos-go/common"
 	"github.com/hyperledger/fabric-protos-go/peer"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/internal/fileutil"
 	"github.com/hyperledger/fabric/protoutil"
 	"github.com/pkg/errors"
@@ -34,7 +34,7 @@ var blkMgrInfoKey = []byte("blkMgrInfo")
 type blockfileMgr struct {
 	rootDir                   string
 	conf                      *Conf
-	db                        *leveldbhelper.DBHandle
+	db                        *kvdbhelper.DBHandle
 	index                     *blockIndex
 	blockfilesInfo            *blockfilesInfo
 	bootstrappingSnapshotInfo *BootstrappingSnapshotInfo
@@ -89,7 +89,7 @@ At start up a new manager:
 			-- If index and file system are not in sync, syncs index from the FS
 	  *)  Updates blockchain info used by the APIs
 */
-func newBlockfileMgr(id string, conf *Conf, indexConfig *IndexConfig, indexStore *leveldbhelper.DBHandle) (*blockfileMgr, error) {
+func newBlockfileMgr(id string, conf *Conf, indexConfig *IndexConfig, indexStore *kvdbhelper.DBHandle) (*blockfileMgr, error) {
 	logger.Debugf("newBlockfileMgr() initializing file-based block storage for ledger: %s ", id)
 	rootDir := conf.getLedgerBlockDir(id)
 	_, err := fileutil.CreateDirIfMissing(rootDir)
@@ -171,7 +171,7 @@ func bootstrapFromSnapshottedTxIDs(
 	snapshotDir string,
 	snapshotInfo *SnapshotInfo,
 	conf *Conf,
-	indexStore *leveldbhelper.DBHandle,
+	indexStore *kvdbhelper.DBHandle,
 ) error {
 	rootDir := conf.getLedgerBlockDir(ledgerID)
 	isEmpty, err := fileutil.CreateDirIfMissing(rootDir)

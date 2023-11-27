@@ -18,7 +18,7 @@ import (
 	"github.com/hyperledger/fabric-protos-go/common"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/hyperledger/fabric-protos-go/peer"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/core/chaincode/implicitcollection"
 	"github.com/hyperledger/fabric/core/ledger/confighistory/confighistorytest"
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
@@ -44,7 +44,7 @@ func TestSnapshotImporter(t *testing.T) {
 	setup := func() (*SnapshotDataImporter, *confighistorytest.Mgr, *dbEntriesVerifier) {
 		testDir := testDir(t)
 		t.Cleanup(func() { os.RemoveAll(testDir) })
-		dbProvider, err := leveldbhelper.NewProvider(&leveldbhelper.Conf{DBPath: testDir})
+		dbProvider, err := kvdbhelper.NewProvider(&kvdbhelper.Conf{DBPath: testDir})
 		require.NoError(t, err)
 		t.Cleanup(func() { dbProvider.Close() })
 
@@ -424,7 +424,7 @@ func TestSnapshotImporterErrorPropagation(t *testing.T) {
 	setup := func() (*SnapshotDataImporter, *confighistorytest.Mgr) {
 		testDir := testDir(t)
 		t.Cleanup(func() { os.RemoveAll(testDir) })
-		dbProvider, err := leveldbhelper.NewProvider(&leveldbhelper.Conf{DBPath: testDir})
+		dbProvider, err := kvdbhelper.NewProvider(&kvdbhelper.Conf{DBPath: testDir})
 		require.NoError(t, err)
 		t.Cleanup(func() { dbProvider.Close() })
 
@@ -811,11 +811,11 @@ func (e eligibilityVal) sameAs(p *peer.CollectionPolicyConfig) bool {
 }
 
 func TestDBUpdates(t *testing.T) {
-	setup := func() *leveldbhelper.Provider {
+	setup := func() *kvdbhelper.Provider {
 		testDir := testDir(t)
 		t.Cleanup(func() { os.RemoveAll(testDir) })
 
-		p, err := leveldbhelper.NewProvider(&leveldbhelper.Conf{DBPath: testDir})
+		p, err := kvdbhelper.NewProvider(&kvdbhelper.Conf{DBPath: testDir})
 		require.NoError(t, err)
 		t.Cleanup(func() { p.Close() })
 		return p
@@ -932,7 +932,7 @@ func TestDBUpdates(t *testing.T) {
 
 type dbEntriesVerifier struct {
 	t  *testing.T
-	db *leveldbhelper.DBHandle
+	db *kvdbhelper.DBHandle
 }
 
 func (v *dbEntriesVerifier) verifyElgMissingDataEntry(key *missingDataKey, expectedVal *bitset.BitSet) {

@@ -7,15 +7,15 @@ SPDX-License-Identifier: Apache-2.0
 package privacyenabledstate
 
 import (
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 )
 
 type metadataHint struct {
 	cache      map[string]bool
-	bookkeeper *leveldbhelper.DBHandle
+	bookkeeper *kvdbhelper.DBHandle
 }
 
-func newMetadataHint(bookkeeper *leveldbhelper.DBHandle) (*metadataHint, error) {
+func newMetadataHint(bookkeeper *kvdbhelper.DBHandle) (*metadataHint, error) {
 	cache := map[string]bool{}
 	itr, err := bookkeeper.GetIterator(nil, nil)
 	if err != nil {

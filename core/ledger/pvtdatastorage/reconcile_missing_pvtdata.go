@@ -9,7 +9,7 @@ package pvtdatastorage
 import (
 	"github.com/bits-and-blooms/bitset"
 	"github.com/hyperledger/fabric-protos-go/ledger/rwset"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/core/ledger"
 	"github.com/pkg/errors"
 )
@@ -300,7 +300,7 @@ func (p *oldBlockDataProcessor) getDeprioMissingDataFromEntriesOrStore(nsCollBlk
 	return decodeMissingDataValue(encMissingData)
 }
 
-func (p *oldBlockDataProcessor) constructDBUpdateBatch() (*leveldbhelper.UpdateBatch, error) {
+func (p *oldBlockDataProcessor) constructDBUpdateBatch() (*kvdbhelper.UpdateBatch, error) {
 	batch := p.db.NewUpdateBatch()
 
 	if err := p.entries.addDataEntriesTo(batch); err != nil {
@@ -337,7 +337,7 @@ type entriesForPvtDataOfOldBlocks struct {
 	bootKVHashesDeletions           []*bootKVHashesKey
 }
 
-func (e *entriesForPvtDataOfOldBlocks) addDataEntriesTo(batch *leveldbhelper.UpdateBatch) error {
+func (e *entriesForPvtDataOfOldBlocks) addDataEntriesTo(batch *kvdbhelper.UpdateBatch) error {
 	var key, val []byte
 	var err error
 
@@ -351,7 +351,7 @@ func (e *entriesForPvtDataOfOldBlocks) addDataEntriesTo(batch *leveldbhelper.Upd
 	return nil
 }
 
-func (e *entriesForPvtDataOfOldBlocks) addHashedIndexEntriesTo(batch *leveldbhelper.UpdateBatch) error {
+func (e *entriesForPvtDataOfOldBlocks) addHashedIndexEntriesTo(batch *kvdbhelper.UpdateBatch) error {
 	for _, hashedIndexEntry := range e.hashedIndexEntries {
 		key := encodeHashedIndexKey(hashedIndexEntry.key)
 		batch.Put(key, []byte(hashedIndexEntry.value))
@@ -359,7 +359,7 @@ func (e *entriesForPvtDataOfOldBlocks) addHashedIndexEntriesTo(batch *leveldbhel
 	return nil
 }
 
-func (e *entriesForPvtDataOfOldBlocks) addExpiryEntriesTo(batch *leveldbhelper.UpdateBatch) error {
+func (e *entriesForPvtDataOfOldBlocks) addExpiryEntriesTo(batch *kvdbhelper.UpdateBatch) error {
 	var key, val []byte
 	var err error
 
@@ -373,7 +373,7 @@ func (e *entriesForPvtDataOfOldBlocks) addExpiryEntriesTo(batch *leveldbhelper.U
 	return nil
 }
 
-func (e *entriesForPvtDataOfOldBlocks) addElgPrioMissingDataEntriesTo(batch *leveldbhelper.UpdateBatch) error {
+func (e *entriesForPvtDataOfOldBlocks) addElgPrioMissingDataEntriesTo(batch *kvdbhelper.UpdateBatch) error {
 	var key, val []byte
 	var err error
 
@@ -396,7 +396,7 @@ func (e *entriesForPvtDataOfOldBlocks) addElgPrioMissingDataEntriesTo(batch *lev
 	return nil
 }
 
-func (e *entriesForPvtDataOfOldBlocks) addElgDeprioMissingDataEntriesTo(batch *leveldbhelper.UpdateBatch) error {
+func (e *entriesForPvtDataOfOldBlocks) addElgDeprioMissingDataEntriesTo(batch *kvdbhelper.UpdateBatch) error {
 	var key, val []byte
 	var err error
 
@@ -419,7 +419,7 @@ func (e *entriesForPvtDataOfOldBlocks) addElgDeprioMissingDataEntriesTo(batch *l
 	return nil
 }
 
-func (e *entriesForPvtDataOfOldBlocks) addBootKVHashDeletionsTo(batch *leveldbhelper.UpdateBatch) {
+func (e *entriesForPvtDataOfOldBlocks) addBootKVHashDeletionsTo(batch *kvdbhelper.UpdateBatch) {
 	for _, k := range e.bootKVHashesDeletions {
 		batch.Delete(encodeBootKVHashesKey(k))
 	}

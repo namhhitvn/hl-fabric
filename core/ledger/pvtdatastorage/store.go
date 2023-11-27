@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger/fabric-protos-go/ledger/rwset"
 	"github.com/hyperledger/fabric-protos-go/ledger/rwset/kvrwset"
 	"github.com/hyperledger/fabric/common/flogging"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/core/ledger"
 	"github.com/hyperledger/fabric/core/ledger/confighistory"
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
@@ -31,7 +31,7 @@ var logger = flogging.MustGetLogger("pvtdatastorage")
 // Provider provides handle to specific 'Store' that in turn manages
 // private write sets for a ledger
 type Provider struct {
-	dbProvider *leveldbhelper.Provider
+	dbProvider *kvdbhelper.Provider
 	pvtData    *PrivateDataConfig
 }
 
@@ -47,7 +47,7 @@ type PrivateDataConfig struct {
 
 // Store manages the permanent storage of private write sets for a ledger
 type Store struct {
-	db                    *leveldbhelper.DBHandle
+	db                    *kvdbhelper.DBHandle
 	ledgerid              string
 	btlPolicy             pvtdatapolicy.BTLPolicy
 	batchesInterval       int
@@ -178,8 +178,8 @@ type lastUpdatedOldBlocksList []uint64
 
 // NewProvider instantiates a StoreProvider
 func NewProvider(conf *PrivateDataConfig) (*Provider, error) {
-	dbProvider, err := leveldbhelper.NewProvider(
-		&leveldbhelper.Conf{
+	dbProvider, err := kvdbhelper.NewProvider(
+		&kvdbhelper.Conf{
 			DBPath:         conf.StorePath,
 			ExpectedFormat: currentDataVersion,
 		})
@@ -1168,8 +1168,8 @@ func (c *collElgProcSync) waitForDone() {
 
 type purgeUpdatesProcessor struct {
 	ledgerid     string
-	db           *leveldbhelper.DBHandle
-	batch        *leveldbhelper.UpdateBatch
+	db           *kvdbhelper.DBHandle
+	batch        *kvdbhelper.UpdateBatch
 	maxBatchSize int
 
 	pvtWrites map[string]*rwsetutil.CollPvtRwSet
@@ -1180,7 +1180,7 @@ type purgeUpdatesProcessor struct {
 
 // newPurgeUpdatesProcessor is used for processing the purge markers - i.e., delete the private data versions that are marked for purge from
 // the pvtdata store.
-func newPurgeUpdatesProcessor(ledgerid string, db *leveldbhelper.DBHandle, purgedKeyAuditLogging bool, maxBatchSize int) *purgeUpdatesProcessor {
+func newPurgeUpdatesProcessor(ledgerid string, db *kvdbhelper.DBHandle, purgedKeyAuditLogging bool, maxBatchSize int) *purgeUpdatesProcessor {
 	return &purgeUpdatesProcessor{
 		ledgerid:              ledgerid,
 		db:                    db,

@@ -10,7 +10,7 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/common/ledger/util"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/bookkeeping"
 )
 
@@ -21,7 +21,7 @@ const (
 )
 
 type expiryKeeper struct {
-	db *leveldbhelper.DBHandle
+	db *kvdbhelper.DBHandle
 }
 
 // expiryInfo encapsulates an 'expiryInfoKey' and corresponding private data keys.

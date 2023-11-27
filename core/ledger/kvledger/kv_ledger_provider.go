@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger/fabric-protos-go/common"
 	"github.com/hyperledger/fabric/common/ledger/blkstorage"
 	"github.com/hyperledger/fabric/common/ledger/dataformat"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/core/ledger"
 	"github.com/hyperledger/fabric/core/ledger/confighistory"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/bookkeeping"
@@ -66,7 +66,7 @@ type Provider struct {
 	initializer          *ledger.Initializer
 	collElgNotifier      *collElgNotifier
 	stats                *stats
-	fileLock             *leveldbhelper.FileLock
+	fileLock             *kvdbhelper.FileLock
 }
 
 // NewProvider instantiates a new Provider.
@@ -90,7 +90,7 @@ func NewProvider(initializer *ledger.Initializer) (pr *Provider, e error) {
 	}()
 
 	fileLockPath := fileLockPath(initializer.Config.RootFSPath)
-	fileLock := leveldbhelper.NewFileLock(fileLockPath)
+	fileLock := kvdbhelper.NewFileLock(fileLockPath)
 	if err := fileLock.Lock(); err != nil {
 		return nil, errors.Wrap(err, "as another peer node command is executing,"+
 			" wait for that command to complete its execution or terminate it before retrying")
@@ -506,12 +506,12 @@ func snapshotMetadataFromProto(p *msgs.BootSnapshotMetadata) (*SnapshotMetadata,
 // Ledger id persistence related code
 // /////////////////////////////////////////////////////////////////////
 type idStore struct {
-	db     *leveldbhelper.DB
+	db     *kvdbhelper.DB
 	dbPath string
 }
 
 func openIDStore(path string) (s *idStore, e error) {
-	db := leveldbhelper.CreateDB(&leveldbhelper.Conf{DBPath: path})
+	db := kvdbhelper.CreateDB(&kvdbhelper.Conf{DBPath: path})
 	db.Open()
 	defer func() {
 		if e != nil {

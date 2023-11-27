@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/stretchr/testify/require"
 )
 
@@ -292,7 +292,7 @@ func TestLockFileIsAdjacentToTransientStorageFolder(t *testing.T) {
 
 	// we can't quite get to the path of the lock.  But we can construct a new lock with the correct path.
 	lockPath := filepath.Join(env.tempdir, transientStorageLockName) // note: PARENT dir of the transient storage.
-	fileLock := leveldbhelper.NewFileLock(lockPath)
+	fileLock := kvdbhelper.NewFileLock(lockPath)
 
 	err := fileLock.Lock()
 	require.ErrorContains(t, err, "lock is already acquired on file")
@@ -370,7 +370,7 @@ func TestPackageDropWithPeerLockIsError(t *testing.T) {
 
 	// lock is at the PARENT directory of the storage folder.
 	lockPath := filepath.Join(env.tempdir, transientStorageLockName)
-	fileLock := leveldbhelper.NewFileLock(lockPath)
+	fileLock := kvdbhelper.NewFileLock(lockPath)
 	require.NoError(t, fileLock.Lock())
 	defer fileLock.Unlock()
 

@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/common/ledger/blkstorage"
 	"github.com/hyperledger/fabric/common/ledger/dataformat"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/core/ledger"
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/rwsetutil"
@@ -24,14 +24,14 @@ var logger = flogging.MustGetLogger("history")
 
 // DBProvider provides handle to HistoryDB for a given channel
 type DBProvider struct {
-	leveldbProvider *leveldbhelper.Provider
+	leveldbProvider *kvdbhelper.Provider
 }
 
 // NewDBProvider instantiates DBProvider
 func NewDBProvider(path string) (*DBProvider, error) {
 	logger.Debugf("constructing HistoryDBProvider dbPath=%s", path)
-	levelDBProvider, err := leveldbhelper.NewProvider(
-		&leveldbhelper.Conf{
+	levelDBProvider, err := kvdbhelper.NewProvider(
+		&kvdbhelper.Conf{
 			DBPath:         path,
 			ExpectedFormat: dataformat.CurrentFormat,
 		},
@@ -71,7 +71,7 @@ func (p *DBProvider) Drop(channelName string) error {
 
 // DB maintains and provides access to history data for a particular channel
 type DB struct {
-	levelDB *leveldbhelper.DBHandle
+	levelDB *kvdbhelper.DBHandle
 	name    string
 }
 

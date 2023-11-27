@@ -24,7 +24,7 @@ import (
 	"github.com/hyperledger/fabric/common/ledger/blkstorage"
 	"github.com/hyperledger/fabric/common/ledger/dataformat"
 	"github.com/hyperledger/fabric/common/ledger/testutil"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/common/metrics/disabled"
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/hyperledger/fabric/core/ledger"
@@ -207,7 +207,7 @@ func TestCheckUpgradeEligibilityV1x(t *testing.T) {
 	conf, cleanup := testConfig(t)
 	defer cleanup()
 	dbPath := LedgerProviderPath(conf.RootFSPath)
-	db := leveldbhelper.CreateDB(&leveldbhelper.Conf{DBPath: dbPath})
+	db := kvdbhelper.CreateDB(&kvdbhelper.Conf{DBPath: dbPath})
 	idStore := &idStore{db, dbPath}
 	db.Open()
 	defer db.Close()
@@ -225,7 +225,7 @@ func TestCheckUpgradeEligibilityCurrentVersion(t *testing.T) {
 	conf, cleanup := testConfig(t)
 	defer cleanup()
 	dbPath := LedgerProviderPath(conf.RootFSPath)
-	db := leveldbhelper.CreateDB(&leveldbhelper.Conf{DBPath: dbPath})
+	db := kvdbhelper.CreateDB(&kvdbhelper.Conf{DBPath: dbPath})
 	idStore := &idStore{db, dbPath}
 	db.Open()
 	defer db.Close()
@@ -242,7 +242,7 @@ func TestCheckUpgradeEligibilityBadFormat(t *testing.T) {
 	conf, cleanup := testConfig(t)
 	defer cleanup()
 	dbPath := LedgerProviderPath(conf.RootFSPath)
-	db := leveldbhelper.CreateDB(&leveldbhelper.Conf{DBPath: dbPath})
+	db := kvdbhelper.CreateDB(&kvdbhelper.Conf{DBPath: dbPath})
 	idStore := &idStore{db, dbPath}
 	db.Open()
 	defer db.Close()
@@ -264,7 +264,7 @@ func TestCheckUpgradeEligibilityEmptyDB(t *testing.T) {
 	conf, cleanup := testConfig(t)
 	defer cleanup()
 	dbPath := LedgerProviderPath(conf.RootFSPath)
-	db := leveldbhelper.CreateDB(&leveldbhelper.Conf{DBPath: dbPath})
+	db := kvdbhelper.CreateDB(&kvdbhelper.Conf{DBPath: dbPath})
 	idStore := &idStore{db, dbPath}
 	db.Open()
 	defer db.Close()

@@ -14,7 +14,7 @@ import (
 
 	"github.com/bits-and-blooms/bitset"
 	"github.com/hyperledger/fabric/common/ledger/util"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/core/chaincode/implicitcollection"
 	"github.com/hyperledger/fabric/core/ledger"
 	"github.com/hyperledger/fabric/core/ledger/confighistory"
@@ -36,12 +36,12 @@ type SnapshotDataImporter struct {
 	eligibilityAndBTLCache *eligibilityAndBTLCache
 
 	rowsSorter *snapshotRowsSorter
-	db         *leveldbhelper.DBHandle
+	db         *kvdbhelper.DBHandle
 }
 
 func newSnapshotDataImporter(
 	ledgerID string,
-	dbHandle *leveldbhelper.DBHandle,
+	dbHandle *kvdbhelper.DBHandle,
 	membershipProvider ledger.MembershipInfoProvider,
 	configHistoryRetriever *confighistory.Retriever,
 	tempDirRoot string,
@@ -346,7 +346,7 @@ func (u *dbUpdates) numKVHashesEntries() int {
 	return len(u.bootKVHashes)
 }
 
-func (u *dbUpdates) commitToDB(db *leveldbhelper.DBHandle) error {
+func (u *dbUpdates) commitToDB(db *kvdbhelper.DBHandle) error {
 	batch := db.NewUpdateBatch()
 	for k, v := range u.elgMissingDataEntries {
 		encKey := encodeElgPrioMissingDataKey(&k)
@@ -388,9 +388,9 @@ func (u *dbUpdates) commitToDB(db *leveldbhelper.DBHandle) error {
 
 type snapshotRowsSorter struct {
 	tempDir    string
-	dbProvider *leveldbhelper.Provider
-	db         *leveldbhelper.DBHandle
-	batch      *leveldbhelper.UpdateBatch
+	dbProvider *kvdbhelper.Provider
+	db         *kvdbhelper.DBHandle
+	batch      *kvdbhelper.UpdateBatch
 	batchSize  int
 }
 
@@ -399,7 +399,7 @@ func newSnapshotRowsSorter(tempDirRoot string) (*snapshotRowsSorter, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error while creating temp dir for sorting rows")
 	}
-	dbProvider, err := leveldbhelper.NewProvider(&leveldbhelper.Conf{
+	dbProvider, err := kvdbhelper.NewProvider(&kvdbhelper.Conf{
 		DBPath: tempDir,
 	})
 	if err != nil {
@@ -452,7 +452,7 @@ func (s *snapshotRowsSorter) cleanup() {
 }
 
 type sortedSnapshotRowsIterator struct {
-	dbIter *leveldbhelper.Iterator
+	dbIter *kvdbhelper.Iterator
 }
 
 func (i *sortedSnapshotRowsIterator) next() (*snapshotRow, error) {

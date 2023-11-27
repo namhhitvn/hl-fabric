@@ -18,7 +18,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric-protos-go/ledger/rwset"
 	"github.com/hyperledger/fabric-protos-go/ledger/rwset/kvrwset"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/core/ledger"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/rwsetutil"
 	btltestutil "github.com/hyperledger/fabric/core/ledger/pvtdatapolicy/testutil"
@@ -195,7 +195,7 @@ func TestStoreIteratorError(t *testing.T) {
 		storeDir, err := ioutil.TempDir("", "pdstore")
 		require.NoError(t, err)
 		s := &Store{}
-		dbProvider, err := leveldbhelper.NewProvider(&leveldbhelper.Conf{DBPath: storeDir})
+		dbProvider, err := kvdbhelper.NewProvider(&kvdbhelper.Conf{DBPath: storeDir})
 		require.NoError(t, err)
 		s.db = dbProvider.GetDBHandle("test-ledger")
 		dbProvider.Close()

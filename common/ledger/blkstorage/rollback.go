@@ -9,7 +9,7 @@ package blkstorage
 import (
 	"os"
 
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/internal/fileutil"
 	"github.com/hyperledger/fabric/protoutil"
 	"github.com/pkg/errors"
@@ -19,10 +19,10 @@ type rollbackMgr struct {
 	ledgerID       string
 	ledgerDir      string
 	indexDir       string
-	dbProvider     *leveldbhelper.Provider
+	dbProvider     *kvdbhelper.Provider
 	indexStore     *blockIndex
 	targetBlockNum uint64
-	reusableBatch  *leveldbhelper.UpdateBatch
+	reusableBatch  *kvdbhelper.UpdateBatch
 }
 
 // Rollback reverts changes made to the block store beyond a given block number.
@@ -60,8 +60,8 @@ func newRollbackMgr(blockStorageDir, ledgerID string, indexConfig *IndexConfig, 
 
 	r.indexDir = conf.getIndexDir()
 	var err error
-	r.dbProvider, err = leveldbhelper.NewProvider(
-		&leveldbhelper.Conf{
+	r.dbProvider, err = kvdbhelper.NewProvider(
+		&kvdbhelper.Conf{
 			DBPath:         r.indexDir,
 			ExpectedFormat: dataFormatVersion(indexConfig),
 		},
@@ -145,7 +145,7 @@ func (r *rollbackMgr) deleteIndexEntriesRange(startBlkNum, endBlkNum uint64) err
 	return r.indexStore.db.WriteBatch(r.reusableBatch, true)
 }
 
-func addIndexEntriesToBeDeleted(batch *leveldbhelper.UpdateBatch, blockInfo *serializedBlockInfo, indexStore *blockIndex) error {
+func addIndexEntriesToBeDeleted(batch *kvdbhelper.UpdateBatch, blockInfo *serializedBlockInfo, indexStore *blockIndex) error {
 	if indexStore.isAttributeIndexed(IndexableAttrBlockHash) {
 		batch.Delete(constructBlockHashKey(protoutil.BlockHeaderHash(blockInfo.blockHeader)))
 	}

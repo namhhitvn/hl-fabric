@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger/fabric-protos-go/ledger/queryresult"
 	commonledger "github.com/hyperledger/fabric/common/ledger"
 	"github.com/hyperledger/fabric/common/ledger/blkstorage"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/rwsetutil"
 	protoutil "github.com/hyperledger/fabric/protoutil"
 	"github.com/pkg/errors"
@@ -20,7 +20,7 @@ import (
 
 // QueryExecutor is a query executor against the LevelDB history DB
 type QueryExecutor struct {
-	levelDB    *leveldbhelper.DBHandle
+	levelDB    *kvdbhelper.DBHandle
 	blockStore *blkstorage.BlockStore
 }
 

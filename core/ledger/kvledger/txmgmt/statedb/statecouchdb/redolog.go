@@ -10,7 +10,7 @@ import (
 	"bytes"
 	"encoding/gob"
 
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb"
 )
@@ -18,11 +18,11 @@ import (
 var redoLogKey = []byte{byte(0)}
 
 type redoLoggerProvider struct {
-	leveldbProvider *leveldbhelper.Provider
+	leveldbProvider *kvdbhelper.Provider
 }
 
 type redoLogger struct {
-	dbHandle *leveldbhelper.DBHandle
+	dbHandle *kvdbhelper.DBHandle
 }
 
 type redoRecord struct {
@@ -31,7 +31,7 @@ type redoRecord struct {
 }
 
 func newRedoLoggerProvider(dirPath string) (*redoLoggerProvider, error) {
-	provider, err := leveldbhelper.NewProvider(&leveldbhelper.Conf{DBPath: dirPath})
+	provider, err := kvdbhelper.NewProvider(&kvdbhelper.Conf{DBPath: dirPath})
 	if err != nil {
 		return nil, err
 	}

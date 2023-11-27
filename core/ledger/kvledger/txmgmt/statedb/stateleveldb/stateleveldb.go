@@ -11,7 +11,7 @@ import (
 
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/common/ledger/dataformat"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb"
 	"github.com/pkg/errors"
@@ -31,14 +31,14 @@ var (
 
 // VersionedDBProvider implements interface VersionedDBProvider
 type VersionedDBProvider struct {
-	dbProvider *leveldbhelper.Provider
+	dbProvider *kvdbhelper.Provider
 }
 
 // NewVersionedDBProvider instantiates VersionedDBProvider
 func NewVersionedDBProvider(dbPath string) (*VersionedDBProvider, error) {
 	logger.Debugf("constructing VersionedDBProvider dbPath=%s", dbPath)
-	dbProvider, err := leveldbhelper.NewProvider(
-		&leveldbhelper.Conf{
+	dbProvider, err := kvdbhelper.NewProvider(
+		&kvdbhelper.Conf{
 			DBPath:         dbPath,
 			ExpectedFormat: dataformat.CurrentFormat,
 		})
@@ -81,12 +81,12 @@ func (provider *VersionedDBProvider) Drop(dbName string) error {
 
 // VersionedDB implements VersionedDB interface
 type versionedDB struct {
-	db     *leveldbhelper.DBHandle
+	db     *kvdbhelper.DBHandle
 	dbName string
 }
 
 // newVersionedDB constructs an instance of VersionedDB
-func newVersionedDB(db *leveldbhelper.DBHandle, dbName string) *versionedDB {
+func newVersionedDB(db *kvdbhelper.DBHandle, dbName string) *versionedDB {
 	return &versionedDB{db, dbName}
 }
 
@@ -350,12 +350,12 @@ func (scanner *kvScanner) GetBookmarkAndClose() string {
 }
 
 type fullDBScanner struct {
-	db     *leveldbhelper.DBHandle
+	db     *kvdbhelper.DBHandle
 	dbItr  iterator.Iterator
 	toSkip func(namespace string) bool
 }
 
-func newFullDBScanner(db *leveldbhelper.DBHandle, skipNamespace func(namespace string) bool) (*fullDBScanner, error) {
+func newFullDBScanner(db *kvdbhelper.DBHandle, skipNamespace func(namespace string) bool) (*fullDBScanner, error) {
 	dbItr, err := db.GetIterator(dataKeyPrefix, dataKeyStopper)
 	if err != nil {
 		return nil, err

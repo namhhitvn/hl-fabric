@@ -12,7 +12,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/stretchr/testify/require"
 )
 
@@ -119,7 +119,7 @@ func TestGetNamespaceIterator(t *testing.T) {
 	})
 }
 
-func verifyNsEntries(t *testing.T, nsItr *leveldbhelper.Iterator, expectedEntries []*compositeKV) {
+func verifyNsEntries(t *testing.T, nsItr *kvdbhelper.Iterator, expectedEntries []*compositeKV) {
 	var retrievedEntries []*compositeKV
 	for nsItr.Next() {
 		require.NoError(t, nsItr.Error())

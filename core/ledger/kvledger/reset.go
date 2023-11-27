@@ -8,14 +8,14 @@ package kvledger
 
 import (
 	"github.com/hyperledger/fabric/common/ledger/blkstorage"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/pkg/errors"
 )
 
 // ResetAllKVLedgers resets all ledger to the genesis block.
 func ResetAllKVLedgers(rootFSPath string) error {
 	fileLockPath := fileLockPath(rootFSPath)
-	fileLock := leveldbhelper.NewFileLock(fileLockPath)
+	fileLock := kvdbhelper.NewFileLock(fileLockPath)
 	if err := fileLock.Lock(); err != nil {
 		return errors.Wrap(err, "as another peer node command is executing,"+
 			" wait for that command to complete its execution or terminate it before retrying")

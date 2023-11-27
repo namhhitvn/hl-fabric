@@ -11,7 +11,7 @@ import (
 
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/common/ledger/dataformat"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/common/metrics"
 	"github.com/hyperledger/fabric/internal/fileutil"
 	"github.com/pkg/errors"
@@ -56,19 +56,19 @@ func (c *IndexConfig) Contains(indexableAttr IndexableAttr) bool {
 type BlockStoreProvider struct {
 	conf            *Conf
 	indexConfig     *IndexConfig
-	leveldbProvider *leveldbhelper.Provider
+	leveldbProvider *kvdbhelper.Provider
 	stats           *stats
 }
 
 // NewProvider constructs a filesystem based block store provider
 func NewProvider(conf *Conf, indexConfig *IndexConfig, metricsProvider metrics.Provider) (*BlockStoreProvider, error) {
-	dbConf := &leveldbhelper.Conf{
-		DBPath:         conf.getIndexDir(),
-		ExpectedFormat: dataFormatVersion(indexConfig),
+	dbConf := &kvdbhelper.Conf{
+		DBPath:           conf.getIndexDir(),
+		ExpectedFormat:   dataFormatVersion(indexConfig),
 		KeyValueDBConfig: conf.keyValueDBConfig,
 	}
 
-	p, err := leveldbhelper.NewProvider(dbConf)
+	p, err := kvdbhelper.NewProvider(dbConf)
 	if err != nil {
 		return nil, err
 	}

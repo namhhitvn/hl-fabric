@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/fabric-protos-go/ledger/rwset"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/core/ledger"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/rwsetutil"
 	"github.com/hyperledger/fabric/core/ledger/util"
@@ -24,7 +24,7 @@ const (
 )
 
 func CheckAndConstructHashedIndex(storePath string, ledgerIDs []string) error {
-	info, err := leveldbhelper.RetrieveDataFormatInfo(storePath)
+	info, err := kvdbhelper.RetrieveDataFormatInfo(storePath)
 	if err != nil {
 		return err
 	}
@@ -46,8 +46,8 @@ func CheckAndConstructHashedIndex(storePath string, ledgerIDs []string) error {
 // constructHashedIndex creates the HashedIndex entries for the private data keys and at the end sets the
 // data format version to the current version (2.5)
 func constructHashedIndex(storePath string, ledgerIDs []string) error {
-	p, err := leveldbhelper.NewProvider(
-		&leveldbhelper.Conf{
+	p, err := kvdbhelper.NewProvider(
+		&kvdbhelper.Conf{
 			DBPath:         storePath,
 			ExpectedFormat: previousDataVersion,
 		})
@@ -68,7 +68,7 @@ func constructHashedIndex(storePath string, ledgerIDs []string) error {
 
 // constructHashedIndexFor creates the HashedIndex entries for a given ledger.
 // In this function we also piggyback to upgrade any private data key from format V11 to V12
-func constructHashedIndexFor(ledgerID string, db *leveldbhelper.DBHandle) error {
+func constructHashedIndexFor(ledgerID string, db *kvdbhelper.DBHandle) error {
 	startKey, endKey := entireDatakeyRange()
 	itr, err := db.GetIterator(startKey, endKey)
 	if err != nil {
@@ -155,7 +155,7 @@ func constructHashedIndexFor(ledgerID string, db *leveldbhelper.DBHandle) error 
 	return nil
 }
 
-func addHashedIndexEntriesInto(batch *leveldbhelper.UpdateBatch, dataKey *dataKey, dataValue *rwset.CollectionPvtReadWriteSet) error {
+func addHashedIndexEntriesInto(batch *kvdbhelper.UpdateBatch, dataKey *dataKey, dataValue *rwset.CollectionPvtReadWriteSet) error {
 	collPvtRWSet, err := rwsetutil.CollPvtRwSetFromProtoMsg(dataValue)
 	if err != nil {
 		return err

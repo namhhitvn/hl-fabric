@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger/fabric-protos-go/ledger/rwset"
 	"github.com/hyperledger/fabric-protos-go/transientstore"
 	"github.com/hyperledger/fabric/common/flogging"
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/hyperledger/fabric/core/ledger"
 	"github.com/pkg/errors"
@@ -67,13 +67,13 @@ type EndorserPvtSimulationResults struct {
 // private write sets of simulated transactions, and implements TransientStoreProvider
 // interface.
 type storeProvider struct {
-	dbProvider *leveldbhelper.Provider
-	fileLock   *leveldbhelper.FileLock
+	dbProvider *kvdbhelper.Provider
+	fileLock   *kvdbhelper.FileLock
 }
 
 // store holds an instance of a levelDB.
 type Store struct {
-	db       *leveldbhelper.DBHandle
+	db       *kvdbhelper.DBHandle
 	ledgerID string
 }
 
@@ -88,7 +88,7 @@ type RwsetScanner struct {
 func NewStoreProvider(path string) (StoreProvider, error) {
 	// Ensure the routine is invoked while the peer is down.
 	lockPath := filepath.Join(filepath.Dir(path), transientStorageLockName)
-	lock := leveldbhelper.NewFileLock(lockPath)
+	lock := kvdbhelper.NewFileLock(lockPath)
 	if err := lock.Lock(); err != nil {
 		return nil, errors.WithMessage(err, "as another peer node command is executing,"+
 			" wait for that command to complete its execution or terminate it before retrying")
@@ -105,14 +105,14 @@ func NewStoreProvider(path string) (StoreProvider, error) {
 
 // Private method used to unwind a dependency between the package level Drop and NewStoreProvider routines.
 // This routine must be invoked while holding the newStoreProvider file lock.
-func newStoreProvider(providerPath string, fileLock *leveldbhelper.FileLock) (*storeProvider, error) {
+func newStoreProvider(providerPath string, fileLock *kvdbhelper.FileLock) (*storeProvider, error) {
 	logger.Debugw("opening provider", "providerPath", providerPath)
 
 	if !fileLock.IsLocked() {
 		panic("newStoreProvider invoked without holding 'fileLock'")
 	}
 
-	dbProvider, err := leveldbhelper.NewProvider(&leveldbhelper.Conf{DBPath: providerPath})
+	dbProvider, err := kvdbhelper.NewProvider(&kvdbhelper.Conf{DBPath: providerPath})
 	if err != nil {
 		return nil, errors.WithMessage(err, "could not open dbprovider")
 	}
@@ -276,7 +276,7 @@ func Drop(providerPath, ledgerID string) error {
 
 	// Ensure the routine is invoked while the peer is down.
 	lockPath := filepath.Join(filepath.Dir(providerPath), transientStorageLockName)
-	lock := leveldbhelper.NewFileLock(lockPath)
+	lock := kvdbhelper.NewFileLock(lockPath)
 	if err := lock.Lock(); err != nil {
 		return errors.New("as another peer node command is executing," +
 			" wait for that command to complete its execution or terminate it before retrying")

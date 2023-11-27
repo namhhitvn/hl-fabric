@@ -11,7 +11,7 @@ import (
 	"encoding/binary"
 	"math"
 
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/pkg/errors"
 )
 
@@ -32,20 +32,20 @@ type compositeKV struct {
 }
 
 type dbProvider struct {
-	*leveldbhelper.Provider
+	*kvdbhelper.Provider
 }
 
 type db struct {
-	*leveldbhelper.DBHandle
+	*kvdbhelper.DBHandle
 }
 
 type batch struct {
-	*leveldbhelper.UpdateBatch
+	*kvdbhelper.UpdateBatch
 }
 
 func newDBProvider(dbPath string) (*dbProvider, error) {
 	logger.Debugf("Opening db for config history: db path = %s", dbPath)
-	p, err := leveldbhelper.NewProvider(&leveldbhelper.Conf{DBPath: dbPath})
+	p, err := kvdbhelper.NewProvider(&kvdbhelper.Conf{DBPath: dbPath})
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (d *db) entryAt(blockNum uint64, ns, key string) (*compositeKV, error) {
 	return &compositeKV{k, v}, nil
 }
 
-func (d *db) getNamespaceIterator(ns string) (*leveldbhelper.Iterator, error) {
+func (d *db) getNamespaceIterator(ns string) (*kvdbhelper.Iterator, error) {
 	nsStartKey := []byte(keyPrefix + ns)
 	nsStartKey = append(nsStartKey, separatorByte)
 	nsEndKey := []byte(keyPrefix + ns)

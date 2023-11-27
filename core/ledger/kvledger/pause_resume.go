@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package kvledger
 
 import (
-	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/msgs"
 	"github.com/pkg/errors"
 )
@@ -31,7 +31,7 @@ func ResumeChannel(rootFSPath, ledgerID string) error {
 }
 
 func pauseOrResumeChannel(rootFSPath, ledgerID string, status msgs.Status) error {
-	fileLock := leveldbhelper.NewFileLock(fileLockPath(rootFSPath))
+	fileLock := kvdbhelper.NewFileLock(fileLockPath(rootFSPath))
 	if err := fileLock.Lock(); err != nil {
 		return errors.Wrap(err, "as another peer node command is executing,"+
 			" wait for that command to complete its execution or terminate it before retrying")
