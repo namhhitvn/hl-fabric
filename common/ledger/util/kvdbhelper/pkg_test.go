@@ -31,6 +31,7 @@ func newTestDBEnv(t *testing.T, path string) *testDBEnv {
 	testDBEnv := &testDBEnv{t: t, path: path}
 	testDBEnv.cleanup()
 	testDBEnv.db = CreateDB(&Conf{DBPath: path})
+	testDBEnv.truncate()
 	return testDBEnv
 }
 
@@ -39,6 +40,7 @@ func newTestProviderEnv(t *testing.T, path string) *testDBProviderEnv {
 	testProviderEnv.cleanup()
 	var err error
 	testProviderEnv.provider, err = NewProvider(&Conf{DBPath: path})
+	testProviderEnv.truncate()
 	if err != nil {
 		panic(err)
 	}
@@ -47,14 +49,28 @@ func newTestProviderEnv(t *testing.T, path string) *testDBProviderEnv {
 
 func (dbEnv *testDBEnv) cleanup() {
 	if dbEnv.db != nil {
+		dbEnv.db.Truncate()
 		dbEnv.db.Close()
 	}
 	require.NoError(dbEnv.t, os.RemoveAll(dbEnv.path))
 }
 
+func (dbEnv *testDBEnv) truncate() {
+	if dbEnv.db != nil {
+		dbEnv.db.Truncate()
+	}
+}
+
 func (providerEnv *testDBProviderEnv) cleanup() {
 	if providerEnv.provider != nil {
+		providerEnv.provider.Truncate()
 		providerEnv.provider.Close()
 	}
 	require.NoError(providerEnv.t, os.RemoveAll(providerEnv.path))
+}
+
+func (providerEnv *testDBProviderEnv) truncate() {
+	if providerEnv.provider != nil {
+		providerEnv.provider.Truncate()
+	}
 }

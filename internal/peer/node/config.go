@@ -83,9 +83,9 @@ func ledgerConfig() *ledger.Config {
 
 	if conf.KeyValueDBConfig.KeyValueDatabase == ledger.CassandraDB {
 		conf.KeyValueDBConfig.CassandraDB = &ledger.CassandraDBConfig{
-			Hosts: viper.GetStringSlice("ledger.keyValueDBConfig.cassandraDBConfig.hosts"),
+			Hosts:    viper.GetStringSlice("ledger.keyValueDBConfig.cassandraDBConfig.hosts"),
 			Keyspace: viper.GetString("ledger.keyValueDBConfig.cassandraDBConfig.keyspace"),
-			// TODO: mapping all cassandra db configs
+			// TODO: namhhitvn - mapping all cassandra db configs
 		}
 	} else {
 		conf.KeyValueDBConfig.KeyValueDatabase = ledger.GoLevelDB

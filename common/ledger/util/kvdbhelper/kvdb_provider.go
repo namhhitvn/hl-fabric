@@ -171,6 +171,10 @@ func (p *Provider) GetDBHandle(dbName string) *DBHandle {
 	return dbHandle
 }
 
+func (p *Provider) Truncate() {
+	p.db.Truncate()
+}
+
 // Close closes the underlying leveldb
 func (p *Provider) Close() {
 	p.db.Close()
