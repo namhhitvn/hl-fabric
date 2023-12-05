@@ -65,6 +65,7 @@ func newTestEnvSelectiveIndexing(t testing.TB, conf *Conf, attrsToIndex []Indexa
 
 func (env *testEnv) Cleanup() {
 	env.provider.Close()
+	env.provider.leveldbProvider.Truncate()
 	env.removeFSPath()
 }
 

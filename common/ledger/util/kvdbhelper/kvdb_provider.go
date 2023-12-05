@@ -41,6 +41,7 @@ type Conf struct {
 	DBPath           string
 	ExpectedFormat   string
 	KeyValueDBConfig *ledger.KeyValueDBConfig
+	IsTestCleanup    bool
 }
 
 // Provider enables to use a single leveldb as multiple logical leveldbs
@@ -105,6 +106,11 @@ func openDBAndCheckFormat(conf *Conf) (d *DB, e error) {
 			db.Close()
 		}
 	}()
+
+	// NOTE: for test
+	if conf.IsTestCleanup {
+		db.Truncate()
+	}
 
 	internalDB := &DBHandle{
 		db:     db,
@@ -294,7 +300,7 @@ func (h *DBHandle) GetIterator(startKey []byte, endKey []byte) (*Iterator, error
 		eKey[len(eKey)-1] = lastKeyIndicator
 	}
 	logger.Debugf("Getting iterator for range [%#v] - [%#v]", sKey, eKey)
-	itr := h.db.GetIterator(sKey, eKey)
+	itr := h.db.GetIterator(sKey, eKey, []byte(h.dbName))
 	if err := itr.Error(); err != nil {
 		itr.Release()
 		return nil, errors.Wrapf(err, "internal leveldb error while obtaining db iterator")

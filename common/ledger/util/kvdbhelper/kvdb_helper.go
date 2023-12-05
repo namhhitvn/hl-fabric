@@ -1,7 +1,9 @@
 package kvdbhelper
 
 import (
+	"bytes"
 	"fmt"
+	"sort"
 	"sync"
 	"syscall"
 	"time"
@@ -13,8 +15,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
+	goleveldbIterator "github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/opt"
-	goleveldbutil "github.com/syndtr/goleveldb/leveldb/util"
+	goleveldbUtil "github.com/syndtr/goleveldb/leveldb/util"
 )
 
 var logger = flogging.MustGetLogger("kvdbhelper")
@@ -24,12 +27,20 @@ type dbState int32
 type CassandraIndexModel struct {
 	key       []byte
 	value     []byte
+	name      []byte
 	timestamp time.Time
 }
 
 const (
 	closed dbState = iota
 	opened
+)
+
+var (
+	ErrWithoutOpen             = errors.New("kvdb: without open")
+	ErrCassandraClosed         = errors.New("cassandra: closed")
+	ErrCassandraIterIndexRange = errors.New("cassandra/iteratorArray: index out of range")
+	ErrCassandraIterScan       = errors.New("cassandra/iteratorArray: iterator scan")
 )
 
 // DB - a wrapper on an actual store
@@ -53,11 +64,8 @@ func CreateDB(conf *Conf) *DB {
 	writeOptsSync := &opt.WriteOptions{}
 	writeOptsSync.Sync = true
 
-	// leveldb
-	leveldb := leveldbhelper.CreateDB(&leveldbhelper.Conf{
-		DBPath:         conf.DBPath,
-		ExpectedFormat: conf.ExpectedFormat,
-	})
+	// hlf-leveldb
+	// leveldb := leveldbhelper.CreateDB(&leveldbhelper.Conf{DBPath: conf.DBPath, ExpectedFormat: conf.ExpectedFormat})
 
 	// TODO: namhhitvn - mapping setting
 	// cassandra
@@ -65,8 +73,9 @@ func CreateDB(conf *Conf) *DB {
 	cassandraCluster.Keyspace = "hlf"
 
 	return &DB{
-		conf:             conf,
-		leveldb:          leveldb,
+		conf: conf,
+		// hlf-leveldb
+		// leveldb:          leveldb,
 		cassandraCluster: cassandraCluster,
 		dbState:          closed,
 		readOpts:         readOpts,
@@ -94,6 +103,13 @@ func (dbInst *DB) Truncate() {
 	}
 }
 
+func (dbInst *DB) CassandraClosed() bool {
+	if dbInst.cassandra != nil {
+		return dbInst.cassandra.Closed()
+	}
+	return true
+}
+
 // Open opens the underlying db
 func (dbInst *DB) Open() {
 	dbInst.mutex.Lock()
@@ -102,8 +118,8 @@ func (dbInst *DB) Open() {
 		return
 	}
 
-	// leveldb
-	dbInst.leveldb.Open()
+	// hlf-leveldb
+	// dbInst.leveldb.Open()
 
 	// cassandra
 	if dbInst.cassandraCluster != nil {
@@ -122,15 +138,18 @@ func (dbInst *DB) IsEmpty() (bool, error) {
 	dbInst.mutex.RLock()
 	defer dbInst.mutex.RUnlock()
 
-	// leveldb
-	hasItems, err := dbInst.leveldb.IsEmpty()
+	var hasItems bool
+	var err error
+
+	// hlf-leveldb
+	// hasItems, err = dbInst.leveldb.IsEmpty()
 
 	// cassandra
 	if dbInst.cassandra != nil {
 		query := `SELECT * FROM hlf_index`
-		itr := dbInst.cassandra.Query(query).Iter()
-		defer itr.Close()
-		scanner := itr.Scanner()
+		iter := dbInst.cassandra.Query(query).Iter()
+		defer iter.Close()
+		scanner := iter.Scanner()
 		hasItems = !scanner.Next()
 		err = errors.Wrapf(scanner.Err(), "error while trying to see if the cassandra is empty")
 	}
@@ -146,8 +165,8 @@ func (dbInst *DB) Close() {
 		return
 	}
 
-	// leveldb
-	dbInst.leveldb.Close()
+	// hlf-leveldb
+	// dbInst.leveldb.Close()
 
 	// cassandra
 	if dbInst.cassandra != nil {
@@ -162,25 +181,31 @@ func (dbInst *DB) Get(key []byte) ([]byte, error) {
 	dbInst.mutex.RLock()
 	defer dbInst.mutex.RUnlock()
 
-	// leveldb
-	value, err := dbInst.leveldb.Get(key)
+	var value []byte
+	var err error
+
+	if dbInst.dbState == closed {
+		err = ErrWithoutOpen
+	}
+
+	// hlf-leveldb
+	// value, err = dbInst.leveldb.Get(key)
 
 	// cassandra
 	if dbInst.cassandra != nil {
 		var retrieved CassandraIndexModel
 		query := `SELECT key, value, timestamp FROM hlf_index WHERE key = ?`
 		err = dbInst.cassandra.Query(query, key).Scan(&retrieved.key, &retrieved.value, &retrieved.timestamp)
-		if err != nil {
-			if err != gocql.ErrNotFound {
-				logger.Errorf("Error retrieving cassandra key [%#v]: %s", key, err)
-				value = nil
-				err = errors.Wrapf(err, "error retrieving cassandra key [%#v]", key)
-			} else {
-				err = nil
-			}
+
+		if err == gocql.ErrNotFound {
+			value = nil
+			err = nil
+		} else if err != nil {
+			logger.Errorf("Error retrieving cassandra key [%#v]: %s", key, err)
+			value = nil
+			err = errors.Wrapf(err, "error retrieving cassandra key [%#v]", key)
 		} else {
 			value = retrieved.value
-			err = nil
 		}
 	}
 
@@ -192,13 +217,19 @@ func (dbInst *DB) Put(key []byte, value []byte, sync bool) error {
 	dbInst.mutex.RLock()
 	defer dbInst.mutex.RUnlock()
 
-	// leveldb
-	err := dbInst.leveldb.Put(key, value, sync)
+	var err error
+
+	if dbInst.dbState == closed {
+		err = ErrWithoutOpen
+	}
+
+	// hlf-leveldb
+	// err = dbInst.leveldb.Put(key, value, sync)
 
 	// cassandra
 	if dbInst.cassandra != nil {
-		query := `INSERT INTO hlf_index (key, value, timestamp) VALUES (?, ?, ?)`
-		err = dbInst.cassandra.Query(query, key, value, time.Now()).Exec()
+		query := `INSERT INTO hlf_index (key, value, timestamp, name) VALUES (?, ?, ?, ?)`
+		err = dbInst.cassandra.Query(query, string(key), value, time.Now(), string(GetDBName(key))).Exec()
 		if err != nil {
 			logger.Errorf("Error writing cassandra key [%#v]", key)
 			err = errors.Wrapf(err, "error writing cassandra key [%#v]", key)
@@ -213,13 +244,15 @@ func (dbInst *DB) Delete(key []byte, sync bool) error {
 	dbInst.mutex.RLock()
 	defer dbInst.mutex.RUnlock()
 
-	// leveldb
-	err := dbInst.leveldb.Delete(key, sync)
+	var err error
+
+	// hlf-leveldb
+	// err = dbInst.leveldb.Delete(key, sync)
 
 	// cassandra
 	if dbInst.cassandra != nil {
 		query := `DELETE FROM hlf_index WHERE key = ?`
-		err = dbInst.cassandra.Query(query, key).Exec()
+		err := dbInst.cassandra.Query(query, key).Exec()
 		if err != nil {
 			logger.Errorf("Error deleting cassandra key [%#v]", key)
 			err = errors.Wrapf(err, "error deleting cassandra key [%#v]", key)
@@ -232,19 +265,80 @@ func (dbInst *DB) Delete(key []byte, sync bool) error {
 // GetIterator returns an iterator over key-value store. The iterator should be released after the use.
 // The resultset contains all the keys that are present in the db between the startKey (inclusive) and the endKey (exclusive).
 // A nil startKey represents the first available key and a nil endKey represent a logical key after the last available key
-func (dbInst *DB) GetIterator(startKey []byte, endKey []byte) iterator.Iterator {
+func (dbInst *DB) GetIterator(startKey []byte, endKey []byte, dbNames ...[]byte) iterator.Iterator {
 	dbInst.mutex.RLock()
 	defer dbInst.mutex.RUnlock()
 
-	// leveldb
-	itr := dbInst.leveldb.DB.NewIterator(&goleveldbutil.Range{Start: startKey, Limit: endKey}, dbInst.readOpts)
+	var iter iterator.Iterator
+
+	// hlf-leveldb
+	// iter = dbInst.leveldb.DB.NewIterator(&goleveldbUtil.Range{Start: startKey, Limit: endKey}, dbInst.readOpts)
 
 	// cassandra
 	if dbInst.cassandra != nil {
-		// TODO: huhu
+		if dbInst.CassandraClosed() {
+			return goleveldbIterator.NewEmptyIterator(ErrCassandraClosed)
+		}
+
+		var queryArgs []any
+		var dbName []byte
+
+		query := `SELECT key, value, timestamp FROM hlf_index`
+		hasWhere := false
+		hasWhereDBName := false
+
+		if len(dbNames) > 0 {
+			dbName = dbNames[0]
+		}
+
+		if startKey != nil || endKey != nil {
+			var startRetrieved CassandraIndexModel
+			var endRetrieved CassandraIndexModel
+			findQuery := `SELECT name, timestamp FROM hlf_index WHERE key = ?`
+			startErr := dbInst.cassandra.Query(findQuery, startKey).Scan(&startRetrieved.name, &startRetrieved.timestamp)
+			endErr := dbInst.cassandra.Query(findQuery, endKey).Scan(&endRetrieved.name, &endRetrieved.timestamp)
+
+			if startErr == nil {
+				query = query + " WHERE timestamp >= ?"
+				hasWhere = true
+				queryArgs = append(queryArgs, startRetrieved.timestamp)
+			}
+
+			if endErr == nil {
+				if !hasWhere {
+					query = query + " WHERE timestamp < ?"
+				} else {
+					query = query + " AND timestamp < ?"
+				}
+				hasWhere = true
+				queryArgs = append(queryArgs, endRetrieved.timestamp)
+			}
+
+			if startRetrieved.name != nil {
+				query = query + " AND name = ?"
+				queryArgs = append(queryArgs, startRetrieved.name)
+				hasWhereDBName = true
+			} else if endRetrieved.name != nil {
+				query = query + " AND name = ?"
+				queryArgs = append(queryArgs, endRetrieved.name)
+				hasWhereDBName = true
+			}
+		}
+
+		if dbName != nil && !hasWhereDBName {
+			if !hasWhere {
+				query = query + " WHERE name = ?"
+			} else {
+				query = query + " AND name = ?"
+			}
+			queryArgs = append(queryArgs, dbName)
+		}
+
+		query = query + " ALLOW FILTERING"
+		iter = NewCassandraIterator(dbInst.cassandra.Query(query, queryArgs...).Iter())
 	}
 
-	return itr
+	return iter
 }
 
 // WriteBatch writes a batch
@@ -252,8 +346,10 @@ func (dbInst *DB) WriteBatch(batch *leveldb.Batch, sync bool) error {
 	dbInst.mutex.RLock()
 	defer dbInst.mutex.RUnlock()
 
-	// leveldb
-	err := dbInst.leveldb.WriteBatch(batch, sync)
+	var err error
+
+	// hlf-leveldb
+	// err = dbInst.leveldb.WriteBatch(batch, sync)
 
 	// cassandra
 	if dbInst.cassandra != nil {
@@ -339,8 +435,8 @@ type CassandraBatch struct {
 }
 
 func (b *CassandraBatch) Put(key, value []byte) {
-	query := `INSERT INTO hlf_index (key, value, timestamp) VALUES (?, ?, ?)`
-	err := b.session.Query(query, key, value, time.Now()).Exec()
+	query := `INSERT INTO hlf_index (key, value, timestamp, name) VALUES (?, ?, ?, ?)`
+	err := b.session.Query(query, string(key), value, time.Now(), string(GetDBName(key))).Exec()
 	if err != nil {
 		logger.Errorf("Error batch writing cassandra key [%#v]", key)
 	}
@@ -352,4 +448,115 @@ func (b *CassandraBatch) Delete(key []byte) {
 	if err != nil {
 		logger.Errorf("Error batch deleting cassandra key [%#v]", key)
 	}
+}
+
+type CassandraIteratorArray struct {
+	iter *gocql.Iter
+	rows []CassandraIndexModel
+}
+
+func (ia *CassandraIteratorArray) Len() int {
+	return len(ia.rows)
+}
+
+func (ia *CassandraIteratorArray) Search(key []byte) int {
+	for i, value := range ia.rows {
+		if bytes.Equal(value.key, key) {
+			return i
+		}
+	}
+	return 0
+}
+
+func (ia *CassandraIteratorArray) Index(i int) (key, value []byte) {
+	if i < 0 || i >= len(ia.rows) {
+		panic(ErrCassandraIterIndexRange)
+	}
+	row := ia.rows[i]
+	return row.key, row.value
+}
+
+func NewCassandraIteratorArray(iter *gocql.Iter) *CassandraIteratorArray {
+	var rows []CassandraIndexModel
+	scanner := iter.Scanner()
+	defer iter.Close()
+
+	for scanner.Next() {
+		var retrieved CassandraIndexModel
+		err := scanner.Scan(&retrieved.key, &retrieved.value, &retrieved.timestamp)
+		if err == gocql.ErrNotFound {
+			break
+		} else if err != nil {
+			panic(ErrCassandraIterScan)
+		}
+		rows = append(rows, retrieved)
+	}
+
+	sort.Slice(rows, func(a int, b int) bool {
+		return string(rows[a].key) < string(rows[b].key)
+	})
+
+	return &CassandraIteratorArray{iter: iter, rows: rows}
+}
+
+type CassandraIterator struct {
+	iter goleveldbIterator.Iterator
+}
+
+func (i *CassandraIterator) Valid() bool {
+	return i.iter.Valid()
+}
+
+func (i *CassandraIterator) First() bool {
+	return i.iter.First()
+}
+
+func (i *CassandraIterator) Last() bool {
+	return i.iter.Last()
+}
+
+func (i *CassandraIterator) Seek(key []byte) bool {
+	return i.iter.Seek(key)
+}
+
+func (i *CassandraIterator) Next() bool {
+	return i.iter.Next()
+}
+
+func (i *CassandraIterator) Prev() bool {
+	return i.iter.Prev()
+}
+
+func (i *CassandraIterator) Key() []byte {
+	return i.iter.Key()
+}
+
+func (i *CassandraIterator) Value() []byte {
+	return i.iter.Value()
+}
+
+func (i *CassandraIterator) Release() {
+	i.iter.Release()
+}
+
+func (i *CassandraIterator) SetReleaser(releaser goleveldbUtil.Releaser) {
+	i.iter.SetReleaser(releaser)
+}
+
+func (i *CassandraIterator) Error() error {
+	return i.iter.Error()
+}
+
+func NewCassandraIterator(iter *gocql.Iter) *CassandraIterator {
+	return &CassandraIterator{
+		iter: goleveldbIterator.NewArrayIterator(NewCassandraIteratorArray(iter)),
+	}
+}
+
+func GetDBName(key []byte) []byte {
+	dbNameLength := bytes.Index(key, dbNameKeySep)
+	if dbNameLength == -1 {
+		return []byte("")
+	}
+	return key[:dbNameLength]
 }

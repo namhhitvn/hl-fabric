@@ -39,7 +39,7 @@ func newTestProviderEnv(t *testing.T, path string) *testDBProviderEnv {
 	testProviderEnv := &testDBProviderEnv{t: t, path: path}
 	testProviderEnv.cleanup()
 	var err error
-	testProviderEnv.provider, err = NewProvider(&Conf{DBPath: path})
+	testProviderEnv.provider, err = NewProvider(&Conf{DBPath: path, IsTestCleanup: true})
 	testProviderEnv.truncate()
 	if err != nil {
 		panic(err)
