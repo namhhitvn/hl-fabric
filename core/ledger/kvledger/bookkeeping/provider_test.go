@@ -51,5 +51,5 @@ func TestProvider(t *testing.T) {
 	require.NoError(t, p.Drop("TestLedger"))
 
 	p.Close()
-	require.EqualError(t, p.Drop("TestLedger"), "internal leveldb error while obtaining db iterator: leveldb: closed")
+	require.EqualError(t, p.Drop("TestLedger"), "internal leveldb error while obtaining db iterator: kvdb: closed")
 }

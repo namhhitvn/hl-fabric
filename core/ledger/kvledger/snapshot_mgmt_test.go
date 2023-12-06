@@ -103,19 +103,19 @@ func TestSnapshotRequestBookKeeperErrorPaths(t *testing.T) {
 	provider.Close()
 
 	_, err = newSnapshotRequestBookkeeper("test-ledger", dbHandle)
-	require.EqualError(t, err, "internal leveldb error while obtaining db iterator: leveldb: closed")
+	require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 
 	err = bookkeeper2.add(20)
-	require.Contains(t, err.Error(), "leveldb: closed")
+	require.Contains(t, err.Error(), "kvdb: closed")
 
 	err = bookkeeper2.delete(1)
-	require.Contains(t, err.Error(), "leveldb: closed")
+	require.Contains(t, err.Error(), "kvdb: closed")
 
 	_, err = bookkeeper2.list()
-	require.Contains(t, err.Error(), "leveldb: closed")
+	require.Contains(t, err.Error(), "kvdb: closed")
 
 	_, err = bookkeeper2.exist(20)
-	require.Contains(t, err.Error(), "leveldb: closed")
+	require.Contains(t, err.Error(), "kvdb: closed")
 }
 
 func TestSnapshotRequests(t *testing.T) {
@@ -338,16 +338,16 @@ func TestSnapshotRequestsErrorPaths(t *testing.T) {
 	provider.Close()
 
 	_, err = provider.Open(ledgerID)
-	require.Contains(t, err.Error(), "leveldb: closed")
+	require.Contains(t, err.Error(), "kvdb: closed")
 
 	err = l.SubmitSnapshotRequest(20)
-	require.Contains(t, err.Error(), "leveldb: closed")
+	require.Contains(t, err.Error(), "kvdb: closed")
 
 	err = l.CancelSnapshotRequest(1)
-	require.Contains(t, err.Error(), "leveldb: closed")
+	require.Contains(t, err.Error(), "kvdb: closed")
 
 	_, err = l.PendingSnapshotRequests()
-	require.EqualError(t, err, "internal leveldb error while obtaining db iterator: leveldb: closed")
+	require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 }
 
 func equal(slice1 []uint64, slice2 []uint64) bool {

@@ -171,7 +171,7 @@ func TestStoreIteratorError(t *testing.T) {
 	store := env.TestStore
 	require.NoError(t, store.Commit(0, nil, nil, nil))
 	env.TestStoreProvider.Close()
-	errStr := "internal leveldb error while obtaining db iterator: leveldb: closed"
+	errStr := "internal leveldb error while obtaining db iterator: kvdb: closed"
 
 	t.Run("GetPvtDataByBlockNum", func(t *testing.T) {
 		block, err := store.GetPvtDataByBlockNum(0, nil)
@@ -773,7 +773,7 @@ func TestDrop(t *testing.T) {
 
 	// negative test
 	env.TestStoreProvider.Close()
-	require.EqualError(t, env.TestStoreProvider.Drop(ledgerid), "internal leveldb error while obtaining db iterator: leveldb: closed")
+	require.EqualError(t, env.TestStoreProvider.Drop(ledgerid), "internal leveldb error while obtaining db iterator: kvdb: closed")
 }
 
 func TestStoreFilterPurgedKeys(t *testing.T) {

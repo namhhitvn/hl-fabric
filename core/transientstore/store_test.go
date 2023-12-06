@@ -720,7 +720,7 @@ func TestIteratorErrorCases(t *testing.T) {
 	testStore := env.store
 	env.storeProvider.Close()
 
-	errStr := "internal leveldb error while obtaining db iterator: leveldb: closed"
+	errStr := "internal leveldb error while obtaining db iterator: kvdb: closed"
 	itr, err := testStore.GetTxPvtRWSetByTxid("tx1", nil)
 	require.EqualError(t, err, errStr)
 	require.Nil(t, itr)

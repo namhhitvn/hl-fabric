@@ -392,7 +392,7 @@ func TestExportUniqueTxIDsErrorCases(t *testing.T) {
 	require.NoError(t, os.MkdirAll(testSnapshotDir, 0o700))
 	env.provider.leveldbProvider.Close()
 	_, err = index.exportUniqueTxIDs(testSnapshotDir, testNewHashFunc)
-	require.EqualError(t, err, "internal leveldb error while obtaining db iterator: leveldb: closed")
+	require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 	os.RemoveAll(testSnapshotDir)
 }
 

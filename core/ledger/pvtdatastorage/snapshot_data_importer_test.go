@@ -538,7 +538,7 @@ func TestSnapshotImporterErrorPropagation(t *testing.T) {
 
 		snapshotDataImporter.rowsSorter.dbProvider.Close()
 		err = snapshotDataImporter.Done()
-		require.EqualError(t, err, "error writing batch to leveldb: leveldb: closed")
+		require.EqualError(t, err, "error writing batch to leveldb: kvdb: closed")
 	})
 
 	t.Run("error-when-retrieving-iterator-during-done", func(t *testing.T) {
@@ -575,7 +575,7 @@ func TestSnapshotImporterErrorPropagation(t *testing.T) {
 
 		snapshotDataImporter.rowsSorter.dbProvider.Close()
 		err = snapshotDataImporter.Done()
-		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: leveldb: closed")
+		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 	})
 }
 
@@ -926,7 +926,7 @@ func TestDBUpdates(t *testing.T) {
 		dbUpdates.elgMissingDataEntries[missingDataKey{}] = &bitset.BitSet{}
 		dbProvider.Close()
 		err := dbUpdates.commitToDB(db)
-		require.Contains(t, err.Error(), "leveldb: closed")
+		require.Contains(t, err.Error(), "kvdb: closed")
 	})
 }
 

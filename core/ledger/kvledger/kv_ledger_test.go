@@ -173,7 +173,7 @@ func TestKVLedgerBlockStorage(t *testing.T) {
 
 		provider.blkStoreProvider.Close()
 		exists, err := lgr.TxIDExists("random-txid")
-		require.EqualError(t, err, "error while trying to check the presence of TXID [random-txid]: internal leveldb error while obtaining db iterator: leveldb: closed")
+		require.EqualError(t, err, "error while trying to check the presence of TXID [random-txid]: internal leveldb error while obtaining db iterator: kvdb: closed")
 		require.False(t, exists)
 	})
 }

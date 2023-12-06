@@ -231,7 +231,7 @@ func TestHistory(t *testing.T) {
 		env.testHistoryDBProvider.Close()
 		qhistory, err = env.testHistoryDB.NewQueryExecutor(store1)
 		itr, err = qhistory.GetHistoryForKey("ns1", "key7")
-		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: leveldb: closed")
+		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 		require.Nil(t, itr)
 	})
 }
@@ -501,7 +501,7 @@ func TestDrop(t *testing.T) {
 	require.NoError(t, env.testHistoryDBProvider.Drop("ledger1"))
 
 	env.testHistoryDBProvider.Close()
-	require.EqualError(t, env.testHistoryDBProvider.Drop("ledger2"), "internal leveldb error while obtaining db iterator: leveldb: closed")
+	require.EqualError(t, env.testHistoryDBProvider.Drop("ledger2"), "internal leveldb error while obtaining db iterator: kvdb: closed")
 }
 
 // TestHistoryWithKVWriteOfNilValue - See FAB-18386 for details

@@ -74,7 +74,7 @@ func TestQueries(t *testing.T) {
 	t.Run("test-iter-error-path", func(t *testing.T) {
 		provider.Close()
 		ckv, err := db.mostRecentEntryBelow(45, "ns1", "key1")
-		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: leveldb: closed")
+		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 		require.Nil(t, ckv)
 	})
 }
@@ -114,7 +114,7 @@ func TestGetNamespaceIterator(t *testing.T) {
 	t.Run("test-iter-error-path", func(t *testing.T) {
 		provider.Close()
 		itr, err := db.getNamespaceIterator("ns1")
-		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: leveldb: closed")
+		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 		require.Nil(t, itr)
 	})
 }

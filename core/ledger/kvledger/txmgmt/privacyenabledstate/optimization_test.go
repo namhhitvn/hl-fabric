@@ -56,7 +56,7 @@ func TestMetadataHintCorrectness(t *testing.T) {
 	t.Run("MetadataIterErrorPath", func(t *testing.T) {
 		bookkeepingTestEnv.TestProvider.Close()
 		metadataHint, err := newMetadataHint(bookkeeper)
-		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: leveldb: closed")
+		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 		require.Nil(t, metadataHint)
 	})
 }

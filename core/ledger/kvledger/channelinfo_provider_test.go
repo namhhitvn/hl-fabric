@@ -215,7 +215,7 @@ func TestGetAllMSPIDs_NegativeTests(t *testing.T) {
 	// test RetrieveBlockByNumber error (before calling GetLastConfigIndexFromBlock) by closing block store provider
 	blkStoreProvider.Close()
 	_, err = channelInfoProvider.getAllMSPIDs()
-	require.Contains(t, err.Error(), "leveldb: closed")
+	require.Contains(t, err.Error(), "kvdb: closed")
 }
 
 func openBlockStorage(t *testing.T, channelName string, basePath string) (*blkstorage.BlockStoreProvider, *blkstorage.BlockStore) {

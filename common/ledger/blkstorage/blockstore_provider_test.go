@@ -244,7 +244,7 @@ func TestDrop(t *testing.T) {
 
 	// negative test
 	provider.Close()
-	require.EqualError(t, provider.Drop("ledger2"), "internal leveldb error while obtaining db iterator: leveldb: closed")
+	require.EqualError(t, provider.Drop("ledger2"), "internal leveldb error while obtaining db iterator: kvdb: closed")
 }
 
 func constructLedgerid(id int) string {

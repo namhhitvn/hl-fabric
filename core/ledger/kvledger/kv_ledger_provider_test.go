@@ -148,10 +148,10 @@ func TestGetLedger(t *testing.T) {
 	// close provider to trigger db error
 	provider.Close()
 	_, err = provider.idStore.getActiveLedgerIDs()
-	require.EqualError(t, err, "error getting ledger ids from idStore: leveldb: closed")
+	require.EqualError(t, err, "error getting ledger ids from idStore: kvdb: closed")
 
 	_, err = provider.idStore.getActiveAndInactiveLedgerIDs()
-	require.EqualError(t, err, "error getting ledger ids from idStore: leveldb: closed")
+	require.EqualError(t, err, "error getting ledger ids from idStore: kvdb: closed")
 }
 
 func TestLedgerMetataDataUnmarshalError(t *testing.T) {
@@ -200,7 +200,7 @@ func TestUpgradeIDStoreFormatDBError(t *testing.T) {
 
 	err := provider.idStore.upgradeFormat()
 	dbPath := LedgerProviderPath(conf.RootFSPath)
-	require.EqualError(t, err, fmt.Sprintf("error while trying to see if the leveldb at path [%s] is empty: leveldb: closed", dbPath))
+	require.EqualError(t, err, fmt.Sprintf("error while trying to see if the leveldb at path [%s] is empty: kvdb: closed", dbPath))
 }
 
 func TestCheckUpgradeEligibilityV1x(t *testing.T) {

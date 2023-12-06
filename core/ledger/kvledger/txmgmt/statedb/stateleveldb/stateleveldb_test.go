@@ -43,7 +43,7 @@ func TestIterator(t *testing.T) {
 		require.NoError(t, err)
 		env.DBProvider.Close()
 		itr, err := db.GetStateRangeScanIterator("ns1", "", "")
-		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: leveldb: closed")
+		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 		require.Nil(t, itr)
 	})
 }
@@ -264,7 +264,7 @@ func TestDropErrorPath(t *testing.T) {
 	require.NoError(t, err)
 
 	env.DBProvider.Close()
-	require.EqualError(t, env.DBProvider.Drop("testdroperror"), "internal leveldb error while obtaining db iterator: leveldb: closed")
+	require.EqualError(t, env.DBProvider.Drop("testdroperror"), "internal leveldb error while obtaining db iterator: kvdb: closed")
 }
 
 type dummyFullScanIter struct {

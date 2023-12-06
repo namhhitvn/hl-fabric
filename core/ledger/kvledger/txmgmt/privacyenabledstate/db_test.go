@@ -601,7 +601,7 @@ func TestDrop(t *testing.T) {
 			ledgerid := generateLedgerID(t)
 			env.GetDBHandle(ledgerid)
 			env.GetProvider().Close()
-			require.EqualError(t, env.GetProvider().Drop(ledgerid), "internal leveldb error while obtaining db iterator: leveldb: closed")
+			require.EqualError(t, env.GetProvider().Drop(ledgerid), "internal leveldb error while obtaining db iterator: kvdb: closed")
 		})
 	}
 }

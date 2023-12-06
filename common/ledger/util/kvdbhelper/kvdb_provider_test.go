@@ -158,7 +158,7 @@ func TestIterator(t *testing.T) {
 	t.Run("test-error-path", func(t *testing.T) {
 		env.provider.Close()
 		itr, err := db1.GetIterator(nil, nil)
-		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: cassandra: closed")
+		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 		require.Nil(t, itr)
 	})
 }
@@ -288,7 +288,7 @@ func TestDrop(t *testing.T) {
 
 	// negative test
 	p.Close()
-	require.EqualError(t, db2.deleteAll(), "internal leveldb error while obtaining db iterator: cassandra: closed")
+	require.EqualError(t, db2.deleteAll(), "internal leveldb error while obtaining db iterator: kvdb: closed")
 }
 
 func TestFormatCheck(t *testing.T) {
@@ -434,11 +434,11 @@ func TestIsEmpty(t *testing.T) {
 
 		env.provider.Close()
 		empty, err := db1.IsEmpty()
-		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: cassandra: closed")
+		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 		require.False(t, empty)
 
 		empty, err = db2.IsEmpty()
-		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: cassandra: closed")
+		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 		require.False(t, empty)
 	})
 }

@@ -2060,7 +2060,7 @@ func TestDropErrorPath(t *testing.T) {
 	vdbEnv.config.Address = origAddress
 
 	vdbEnv.DBProvider.Close()
-	require.EqualError(t, vdbEnv.DBProvider.Drop(channelName), "internal leveldb error while obtaining db iterator: leveldb: closed")
+	require.EqualError(t, vdbEnv.DBProvider.Drop(channelName), "internal leveldb error while obtaining db iterator: kvdb: closed")
 }
 
 func TestReadFromDBInvalidKey(t *testing.T) {

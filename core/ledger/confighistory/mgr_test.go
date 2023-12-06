@@ -179,7 +179,7 @@ func TestDrop(t *testing.T) {
 
 	// test error path
 	mgr.Close()
-	require.EqualError(t, mgr.Drop("ledger2"), "internal leveldb error while obtaining db iterator: leveldb: closed")
+	require.EqualError(t, mgr.Drop("ledger2"), "internal leveldb error while obtaining db iterator: kvdb: closed")
 }
 
 func TestWithImplicitColls(t *testing.T) {
@@ -485,7 +485,7 @@ func TestExportAndImportConfigHistory(t *testing.T) {
 		require.NoError(t, err)
 		defer dataFileWriter.Close()
 		err = env.mgr.ImportFromSnapshot("ledger2", env.testSnapshotDir)
-		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: leveldb: closed")
+		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 	})
 }
 
@@ -581,7 +581,7 @@ func TestExportConfigHistoryErrorCase(t *testing.T) {
 	require.NoError(t, os.MkdirAll(env.testSnapshotDir, 0o700))
 	env.mgr.dbProvider.Close()
 	_, err = retriever.ExportConfigHistory(env.testSnapshotDir, testNewHashFunc)
-	require.EqualError(t, err, "internal leveldb error while obtaining db iterator: leveldb: closed")
+	require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 	os.RemoveAll(env.testSnapshotDir)
 }
 

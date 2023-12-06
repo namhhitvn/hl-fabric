@@ -80,7 +80,7 @@ func TestExpiryKeeper(t *testing.T) {
 	t.Run("test-error-path", func(t *testing.T) {
 		testenv.TestProvider.Close()
 		expirtyInfo, err := expiryKeeper.retrieve(15)
-		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: leveldb: closed")
+		require.EqualError(t, err, "internal leveldb error while obtaining db iterator: kvdb: closed")
 		require.Nil(t, expirtyInfo)
 	})
 }

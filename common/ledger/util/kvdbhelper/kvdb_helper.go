@@ -38,9 +38,9 @@ const (
 
 var (
 	ErrWithoutOpen             = errors.New("kvdb: without open")
-	ErrCassandraClosed         = errors.New("cassandra: closed")
-	ErrCassandraIterIndexRange = errors.New("cassandra/iteratorArray: index out of range")
-	ErrCassandraIterScan       = errors.New("cassandra/iteratorArray: iterator scan")
+	ErrCassandraClosed         = errors.New("kvdb: closed")
+	ErrCassandraIterIndexRange = errors.New("kvdb/iteratorArray: index out of range")
+	ErrCassandraIterScan       = errors.New("kvdb/iteratorArray: iterator sca")
 )
 
 // DB - a wrapper on an actual store
@@ -283,7 +283,7 @@ func (dbInst *DB) GetIterator(startKey []byte, endKey []byte, dbNames ...[]byte)
 		var queryArgs []any
 		var dbName []byte
 
-		query := `SELECT key, value, timestamp FROM hlf_index`
+		query := `SELECT key, value FROM hlf_index`
 		hasWhere := false
 		hasWhereDBName := false
 
@@ -313,6 +313,16 @@ func (dbInst *DB) GetIterator(startKey []byte, endKey []byte, dbNames ...[]byte)
 				hasWhere = true
 				queryArgs = append(queryArgs, endRetrieved.timestamp)
 			}
+
+			// if (startKey != nil && startErr != nil) || (endKey != nil && endErr != nil) {
+			// 	if !hasWhere {
+			// 		query = query + " WHERE keystr = ?"
+			// 	} else {
+			// 		query = query + " AND keystr = ?"
+			// 	}
+			// 	hasWhere = true
+			// 	queryArgs = append(queryArgs, "_empty_")
+			// }
 
 			if startRetrieved.name != nil {
 				query = query + " AND name = ?"
@@ -460,12 +470,16 @@ func (ia *CassandraIteratorArray) Len() int {
 }
 
 func (ia *CassandraIteratorArray) Search(key []byte) int {
+	def := -1
 	for i, value := range ia.rows {
-		if bytes.Equal(value.key, key) {
+		if bytes.Equal(value.key, key) || bytes.Compare(value.key, key) > 0 {
 			return i
 		}
 	}
-	return 0
+	if def == -1 && bytes.Compare(ia.rows[len(ia.rows)-1].key, key) < 0 {
+		def = len(ia.rows)
+	}
+	return def
 }
 
 func (ia *CassandraIteratorArray) Index(i int) (key, value []byte) {
@@ -483,7 +497,7 @@ func NewCassandraIteratorArray(iter *gocql.Iter) *CassandraIteratorArray {
 
 	for scanner.Next() {
 		var retrieved CassandraIndexModel
-		err := scanner.Scan(&retrieved.key, &retrieved.value, &retrieved.timestamp)
+		err := scanner.Scan(&retrieved.key, &retrieved.value)
 		if err == gocql.ErrNotFound {
 			break
 		} else if err != nil {
@@ -507,30 +521,52 @@ func (i *CassandraIterator) Valid() bool {
 	return i.iter.Valid()
 }
 
+// First moves the iterator to the first key/value pair. If the iterator
+// only contains one key/value pair then First and Last would moves
+// to the same key/value pair.
+// It returns whether such pair exist.
 func (i *CassandraIterator) First() bool {
 	return i.iter.First()
 }
 
+// Last moves the iterator to the last key/value pair. If the iterator
+// only contains one key/value pair then First and Last would moves
+// to the same key/value pair.
+// It returns whether such pair exist.
 func (i *CassandraIterator) Last() bool {
 	return i.iter.Last()
 }
 
+// Seek moves the iterator to the first key/value pair whose key is greater
+// than or equal to the given key.
+// It returns whether such pair exist.
+// It is safe to modify the contents of the argument after Seek returns.
 func (i *CassandraIterator) Seek(key []byte) bool {
 	return i.iter.Seek(key)
 }
 
+// Next moves the iterator to the next key/value pair.
+// It returns false if the iterator is exhausted.
 func (i *CassandraIterator) Next() bool {
 	return i.iter.Next()
 }
 
+// Prev moves the iterator to the previous key/value pair.
+// It returns false if the iterator is exhausted.
 func (i *CassandraIterator) Prev() bool {
 	return i.iter.Prev()
 }
 
+// Key returns the key of the current key/value pair, or nil if done.
+// The caller should not modify the contents of the returned slice, and
+// its contents may change on the next call to any 'seeks method'.
 func (i *CassandraIterator) Key() []byte {
 	return i.iter.Key()
 }
 
+// Value returns the value of the current key/value pair, or nil if done.
+// The caller should not modify the contents of the returned slice, and
+// its contents may change on the next call to any 'seeks method'.
 func (i *CassandraIterator) Value() []byte {
 	return i.iter.Value()
 }
