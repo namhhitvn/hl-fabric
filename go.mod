@@ -79,6 +79,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/snappy v0.0.4 // indirect
+	github.com/google/uuid v1.5.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hyperledger/fabric-amcl v0.0.0-20210603140002-2670f91851c8 // indirect

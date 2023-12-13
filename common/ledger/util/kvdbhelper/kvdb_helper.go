@@ -2,7 +2,6 @@ package kvdbhelper
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"sort"
 	"sync"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
+	"github.com/google/uuid"
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
 	"github.com/hyperledger/fabric/internal/fileutil"
@@ -26,8 +26,8 @@ var logger = flogging.MustGetLogger("kvdbhelper")
 type dbState int32
 
 type CassandraIndexModel struct {
+	uuid      string
 	key       []byte
-	hex_key   string
 	value     []byte
 	name      []byte
 	timestamp time.Time
@@ -196,8 +196,8 @@ func (dbInst *DB) Get(key []byte) ([]byte, error) {
 	// cassandra
 	if dbInst.cassandra != nil {
 		var retrieved CassandraIndexModel
-		query := `SELECT key, value, timestamp FROM hlf_index WHERE hex_key = ?`
-		err = dbInst.cassandra.Query(query, encodeKeyToHexString(key)).Scan(&retrieved.key, &retrieved.value, &retrieved.timestamp)
+		query := `SELECT key, value, timestamp FROM hlf_index WHERE uuid = ?`
+		err = dbInst.cassandra.Query(query, genUUIDFromKey(key)).Scan(&retrieved.key, &retrieved.value, &retrieved.timestamp)
 
 		if err == gocql.ErrNotFound {
 			value = nil
@@ -230,9 +230,9 @@ func (dbInst *DB) Put(key []byte, value []byte, sync bool) error {
 
 	// cassandra
 	if dbInst.cassandra != nil {
-		query := `INSERT INTO hlf_index (key, hex_key, value, timestamp, name) VALUES (?, ?, ?, ?, ?)`
-		fmt.Println(fmt.Sprintf(`[MYDEBUG] Put -> key="%s" hexKey="%s"`, string(key), encodeKeyToHexString(key)))
-		err = dbInst.cassandra.Query(query, key, encodeKeyToHexString(key), value, time.Now(), string(GetDBName(key))).Exec()
+		query := `INSERT INTO hlf_index (uuid, key, value, timestamp, name) VALUES (?, ?, ?, ?, ?)`
+		// fmt.Println(fmt.Sprintf(`[MYDEBUG] Put -> key="%s" uuid="%s"`, string(key), genUUIDFromKey(key)))
+		err = dbInst.cassandra.Query(query, genUUIDFromKey(key), key, value, time.Now(), string(GetDBName(key))).Exec()
 		if err != nil {
 			logger.Errorf("Error writing cassandra key [%#v]", key)
 			err = errors.Wrapf(err, "error writing cassandra key [%#v]", key)
@@ -254,8 +254,8 @@ func (dbInst *DB) Delete(key []byte, sync bool) error {
 
 	// cassandra
 	if dbInst.cassandra != nil {
-		query := `DELETE FROM hlf_index WHERE hex_key = ?`
-		err := dbInst.cassandra.Query(query, encodeKeyToHexString(key)).Exec()
+		query := `DELETE FROM hlf_index WHERE uuid = ?`
+		err := dbInst.cassandra.Query(query, genUUIDFromKey(key)).Exec()
 		if err != nil {
 			logger.Errorf("Error deleting cassandra key [%#v]", key)
 			err = errors.Wrapf(err, "error deleting cassandra key [%#v]", key)
@@ -307,11 +307,11 @@ func (dbInst *DB) GetIterator(startKey []byte, endKey []byte, args ...[]byte) it
 		if sKey != nil || eKey != nil {
 			var startRetrieved CassandraIndexModel
 			var endRetrieved CassandraIndexModel
-			findQuery := `SELECT name, timestamp FROM hlf_index WHERE hex_key = ?`
-			startErr := dbInst.cassandra.Query(findQuery, encodeKeyToHexString(startKey)).Scan(&startRetrieved.name, &startRetrieved.timestamp)
-			endErr := dbInst.cassandra.Query(findQuery, encodeKeyToHexString(endKey)).Scan(&endRetrieved.name, &endRetrieved.timestamp)
+			findQuery := `SELECT name, timestamp FROM hlf_index WHERE uuid = ?`
+			startErr := dbInst.cassandra.Query(findQuery, genUUIDFromKey(startKey)).Scan(&startRetrieved.name, &startRetrieved.timestamp)
+			endErr := dbInst.cassandra.Query(findQuery, genUUIDFromKey(endKey)).Scan(&endRetrieved.name, &endRetrieved.timestamp)
 
-			fmt.Println(fmt.Sprintf(`[MYDEBUG] GetIterator -> sKey="%s" eKey="%s" --- sHexKey="%s" eHexKey="%s"`, string(startKey), string(endKey), encodeKeyToHexString(startKey), encodeKeyToHexString(endKey)))
+			// fmt.Println(fmt.Sprintf(`[MYDEBUG] GetIterator -> sKey="%s" eKey="%s" --- suuid="%s" euuid="%s"`, string(startKey), string(endKey), genUUIDFromKey(startKey), genUUIDFromKey(endKey)))
 
 			if startErr == nil {
 				query = query + " WHERE timestamp >= ?"
@@ -462,17 +462,17 @@ type CassandraBatch struct {
 }
 
 func (b *CassandraBatch) Put(key, value []byte) {
-	query := `INSERT INTO hlf_index (key, hex_key, value, timestamp, name) VALUES (?, ?, ?, ?, ?)`
-	fmt.Println(fmt.Sprintf(`[MYDEBUG] Put(Batch) -> key="%s" hexKey="%s"`, string(key), encodeKeyToHexString(key)))
-	err := b.session.Query(query, key, encodeKeyToHexString(key), value, time.Now(), string(GetDBName(key))).Exec()
+	query := `INSERT INTO hlf_index (uuid, key, value, timestamp, name) VALUES (?, ?, ?, ?, ?)`
+	// fmt.Println(fmt.Sprintf(`[MYDEBUG] Put(Batch) -> key="%s" uuid="%s"`, string(key), genUUIDFromKey(key)))
+	err := b.session.Query(query, genUUIDFromKey(key), key, value, time.Now(), string(GetDBName(key))).Exec()
 	if err != nil {
 		logger.Errorf("Error batch writing cassandra key [%#v]", key)
 	}
 }
 
 func (b *CassandraBatch) Delete(key []byte) {
-	query := `DELETE FROM hlf_index WHERE hex_key = ?`
-	err := b.session.Query(query, encodeKeyToHexString(key)).Exec()
+	query := `DELETE FROM hlf_index WHERE uuid = ?`
+	err := b.session.Query(query, genUUIDFromKey(key)).Exec()
 	if err != nil {
 		logger.Errorf("Error batch deleting cassandra key [%#v]", key)
 	}
@@ -615,10 +615,10 @@ func GetDBName(key []byte) []byte {
 	return key[:dbNameLength]
 }
 
-func trimKey(key []byte) []byte {
-	return bytes.Split(key, TxSuffixSep)[0]
-}
+var namespace = uuid.UUID{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}
 
-func encodeKeyToHexString(key []byte) string {
-	return hex.EncodeToString(trimKey(key))
+func genUUIDFromKey(key []byte) string {
+	trimKey := bytes.Split(key, TxSuffixSep)[0]
+	uuid := uuid.NewSHA1(namespace, trimKey)
+	return uuid.String()
 }
