@@ -23,6 +23,7 @@ const (
 
 var (
 	dbNameKeySep     = []byte{0x00}
+	TxSuffixSep      = []byte{0x16}
 	lastKeyIndicator = byte(0x01)
 	formatVersionKey = []byte{'f'} // a single key in db whose value indicates the version of the data format
 )
@@ -300,7 +301,7 @@ func (h *DBHandle) GetIterator(startKey []byte, endKey []byte) (*Iterator, error
 		eKey[len(eKey)-1] = lastKeyIndicator
 	}
 	logger.Debugf("Getting iterator for range [%#v] - [%#v]", sKey, eKey)
-	itr := h.db.GetIterator(sKey, eKey, []byte(h.dbName))
+	itr := h.db.GetIterator(sKey, eKey, []byte(h.dbName), startKey, endKey)
 	if err := itr.Error(); err != nil {
 		itr.Release()
 		return nil, errors.Wrapf(err, "internal leveldb error while obtaining db iterator")

@@ -2,6 +2,7 @@ package kvdbhelper
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"sync"
@@ -26,6 +27,7 @@ type dbState int32
 
 type CassandraIndexModel struct {
 	key       []byte
+	hex_key   string
 	value     []byte
 	name      []byte
 	timestamp time.Time
@@ -194,8 +196,8 @@ func (dbInst *DB) Get(key []byte) ([]byte, error) {
 	// cassandra
 	if dbInst.cassandra != nil {
 		var retrieved CassandraIndexModel
-		query := `SELECT key, value, timestamp FROM hlf_index WHERE key = ?`
-		err = dbInst.cassandra.Query(query, key).Scan(&retrieved.key, &retrieved.value, &retrieved.timestamp)
+		query := `SELECT key, value, timestamp FROM hlf_index WHERE hex_key = ?`
+		err = dbInst.cassandra.Query(query, encodeKeyToHexString(key)).Scan(&retrieved.key, &retrieved.value, &retrieved.timestamp)
 
 		if err == gocql.ErrNotFound {
 			value = nil
@@ -228,8 +230,9 @@ func (dbInst *DB) Put(key []byte, value []byte, sync bool) error {
 
 	// cassandra
 	if dbInst.cassandra != nil {
-		query := `INSERT INTO hlf_index (key, value, timestamp, name) VALUES (?, ?, ?, ?)`
-		err = dbInst.cassandra.Query(query, string(key), value, time.Now(), string(GetDBName(key))).Exec()
+		query := `INSERT INTO hlf_index (key, hex_key, value, timestamp, name) VALUES (?, ?, ?, ?, ?)`
+		fmt.Println(fmt.Sprintf(`[MYDEBUG] Put -> key="%s" hexKey="%s"`, string(key), encodeKeyToHexString(key)))
+		err = dbInst.cassandra.Query(query, key, encodeKeyToHexString(key), value, time.Now(), string(GetDBName(key))).Exec()
 		if err != nil {
 			logger.Errorf("Error writing cassandra key [%#v]", key)
 			err = errors.Wrapf(err, "error writing cassandra key [%#v]", key)
@@ -251,8 +254,8 @@ func (dbInst *DB) Delete(key []byte, sync bool) error {
 
 	// cassandra
 	if dbInst.cassandra != nil {
-		query := `DELETE FROM hlf_index WHERE key = ?`
-		err := dbInst.cassandra.Query(query, key).Exec()
+		query := `DELETE FROM hlf_index WHERE hex_key = ?`
+		err := dbInst.cassandra.Query(query, encodeKeyToHexString(key)).Exec()
 		if err != nil {
 			logger.Errorf("Error deleting cassandra key [%#v]", key)
 			err = errors.Wrapf(err, "error deleting cassandra key [%#v]", key)
@@ -265,7 +268,7 @@ func (dbInst *DB) Delete(key []byte, sync bool) error {
 // GetIterator returns an iterator over key-value store. The iterator should be released after the use.
 // The resultset contains all the keys that are present in the db between the startKey (inclusive) and the endKey (exclusive).
 // A nil startKey represents the first available key and a nil endKey represent a logical key after the last available key
-func (dbInst *DB) GetIterator(startKey []byte, endKey []byte, dbNames ...[]byte) iterator.Iterator {
+func (dbInst *DB) GetIterator(startKey []byte, endKey []byte, args ...[]byte) iterator.Iterator {
 	dbInst.mutex.RLock()
 	defer dbInst.mutex.RUnlock()
 
@@ -282,26 +285,42 @@ func (dbInst *DB) GetIterator(startKey []byte, endKey []byte, dbNames ...[]byte)
 
 		var queryArgs []any
 		var dbName []byte
+		var sKey []byte = startKey
+		var eKey []byte = endKey
 
 		query := `SELECT key, value FROM hlf_index`
 		hasWhere := false
 		hasWhereDBName := false
 
-		if len(dbNames) > 0 {
-			dbName = dbNames[0]
+		if len(args) > 0 {
+			dbName = args[0]
+
+			if len(args) >= 2 {
+				sKey = args[1]
+			}
+
+			if len(args) >= 3 {
+				eKey = args[2]
+			}
 		}
 
-		if startKey != nil || endKey != nil {
+		if sKey != nil || eKey != nil {
 			var startRetrieved CassandraIndexModel
 			var endRetrieved CassandraIndexModel
-			findQuery := `SELECT name, timestamp FROM hlf_index WHERE key = ?`
-			startErr := dbInst.cassandra.Query(findQuery, startKey).Scan(&startRetrieved.name, &startRetrieved.timestamp)
-			endErr := dbInst.cassandra.Query(findQuery, endKey).Scan(&endRetrieved.name, &endRetrieved.timestamp)
+			findQuery := `SELECT name, timestamp FROM hlf_index WHERE hex_key = ?`
+			startErr := dbInst.cassandra.Query(findQuery, encodeKeyToHexString(startKey)).Scan(&startRetrieved.name, &startRetrieved.timestamp)
+			endErr := dbInst.cassandra.Query(findQuery, encodeKeyToHexString(endKey)).Scan(&endRetrieved.name, &endRetrieved.timestamp)
+
+			fmt.Println(fmt.Sprintf(`[MYDEBUG] GetIterator -> sKey="%s" eKey="%s" --- sHexKey="%s" eHexKey="%s"`, string(startKey), string(endKey), encodeKeyToHexString(startKey), encodeKeyToHexString(endKey)))
 
 			if startErr == nil {
 				query = query + " WHERE timestamp >= ?"
 				hasWhere = true
 				queryArgs = append(queryArgs, startRetrieved.timestamp)
+			} else if sKey != nil && startErr == gocql.ErrNotFound && eKey == nil {
+				query = query + " WHERE key = ?"
+				hasWhere = true
+				queryArgs = append(queryArgs, []byte("_empty_"))
 			}
 
 			if endErr == nil {
@@ -312,17 +331,15 @@ func (dbInst *DB) GetIterator(startKey []byte, endKey []byte, dbNames ...[]byte)
 				}
 				hasWhere = true
 				queryArgs = append(queryArgs, endRetrieved.timestamp)
+			} else if eKey != nil && endErr == gocql.ErrNotFound && ((sKey != nil && startErr != nil) || (sKey == nil || startErr == gocql.ErrNotFound)) {
+				if !hasWhere {
+					query = query + " WHERE key = ?"
+				} else {
+					query = query + " AND key = ?"
+				}
+				hasWhere = true
+				queryArgs = append(queryArgs, []byte("_empty_"))
 			}
-
-			// if (startKey != nil && startErr != nil) || (endKey != nil && endErr != nil) {
-			// 	if !hasWhere {
-			// 		query = query + " WHERE keystr = ?"
-			// 	} else {
-			// 		query = query + " AND keystr = ?"
-			// 	}
-			// 	hasWhere = true
-			// 	queryArgs = append(queryArgs, "_empty_")
-			// }
 
 			if startRetrieved.name != nil {
 				query = query + " AND name = ?"
@@ -445,16 +462,17 @@ type CassandraBatch struct {
 }
 
 func (b *CassandraBatch) Put(key, value []byte) {
-	query := `INSERT INTO hlf_index (key, value, timestamp, name) VALUES (?, ?, ?, ?)`
-	err := b.session.Query(query, string(key), value, time.Now(), string(GetDBName(key))).Exec()
+	query := `INSERT INTO hlf_index (key, hex_key, value, timestamp, name) VALUES (?, ?, ?, ?, ?)`
+	fmt.Println(fmt.Sprintf(`[MYDEBUG] Put(Batch) -> key="%s" hexKey="%s"`, string(key), encodeKeyToHexString(key)))
+	err := b.session.Query(query, key, encodeKeyToHexString(key), value, time.Now(), string(GetDBName(key))).Exec()
 	if err != nil {
 		logger.Errorf("Error batch writing cassandra key [%#v]", key)
 	}
 }
 
 func (b *CassandraBatch) Delete(key []byte) {
-	query := `DELETE FROM hlf_index WHERE key = ?`
-	err := b.session.Query(query, key).Exec()
+	query := `DELETE FROM hlf_index WHERE hex_key = ?`
+	err := b.session.Query(query, encodeKeyToHexString(key)).Exec()
 	if err != nil {
 		logger.Errorf("Error batch deleting cassandra key [%#v]", key)
 	}
@@ -595,4 +613,12 @@ func GetDBName(key []byte) []byte {
 		return []byte("")
 	}
 	return key[:dbNameLength]
+}
+
+func trimKey(key []byte) []byte {
+	return bytes.Split(key, TxSuffixSep)[0]
+}
+
+func encodeKeyToHexString(key []byte) string {
+	return hex.EncodeToString(trimKey(key))
 }

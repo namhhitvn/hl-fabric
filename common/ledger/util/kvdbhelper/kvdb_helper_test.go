@@ -113,7 +113,7 @@ func TestLevelDBHelper(t *testing.T) {
 	require.Equal(t, "", string(val3))
 
 	keys := []string{}
-	itr := db.GetIterator(nil, nil)
+	itr := db.GetIterator(nil, nil, nil, nil, nil)
 	for itr.Next() {
 		keys = append(keys, string(itr.Key()))
 	}
