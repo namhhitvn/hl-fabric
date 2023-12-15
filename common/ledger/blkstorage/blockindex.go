@@ -422,7 +422,7 @@ func constructTxIDKey(txID string, blkNum, txNum uint64) []byte {
 		util.EncodeOrderPreservingVarUint64(uint64(len(txID)))...,
 	)
 	k = append(k, txID...)
-	k = append(k, kvdbhelper.TxSuffixSep...)
+	k = append(k, kvdbhelper.TxIdSep...)
 	k = append(k, util.EncodeOrderPreservingVarUint64(blkNum)...)
 	return append(k, util.EncodeOrderPreservingVarUint64(txNum)...)
 }
@@ -450,11 +450,6 @@ func retrieveTxID(encodedTxIDKey []byte) (string, error) {
 }
 
 func retrieveBlockNum(encodedTxIDKey []byte, BlkNumStartingIndex int) (uint64, error) {
-	parts := bytes.Split(encodedTxIDKey, kvdbhelper.TxSuffixSep)
-	if len(parts) == 2 {
-		n, _, err := util.DecodeOrderPreservingVarUint64(parts[1])
-		return n, err
-	}
 	n, _, err := util.DecodeOrderPreservingVarUint64(encodedTxIDKey[BlkNumStartingIndex:])
 	return n, err
 }

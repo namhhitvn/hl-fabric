@@ -23,7 +23,7 @@ const (
 
 var (
 	dbNameKeySep     = []byte{0x00}
-	TxSuffixSep      = []byte{0x16}
+	TxIdSep          = []byte{0x16}
 	lastKeyIndicator = byte(0x01)
 	formatVersionKey = []byte{'f'} // a single key in db whose value indicates the version of the data format
 )

@@ -622,7 +622,7 @@ func GetDBName(key []byte) []byte {
 var namespace = uuid.UUID{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}
 
 func genUUIDFromKey(key []byte) string {
-	trimKey := bytes.Split(key, TxSuffixSep)[0]
+	trimKey := bytes.Split(key, TxIdSep)[0]
 	uuid := uuid.NewSHA1(namespace, trimKey)
 	return uuid.String()
 }
