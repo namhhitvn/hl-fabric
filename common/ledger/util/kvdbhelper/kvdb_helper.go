@@ -287,6 +287,8 @@ func (dbInst *DB) GetIterator(startKey []byte, endKey []byte, args ...[]byte) it
 		var dbName []byte
 		var sKey []byte = startKey
 		var eKey []byte = endKey
+		var startRetrieved CassandraIndexModel
+		var endRetrieved CassandraIndexModel
 
 		query := `SELECT key, value FROM hlf_index`
 		hasWhere := false
@@ -304,9 +306,11 @@ func (dbInst *DB) GetIterator(startKey []byte, endKey []byte, args ...[]byte) it
 			}
 		}
 
-		if sKey != nil || eKey != nil {
-			var startRetrieved CassandraIndexModel
-			var endRetrieved CassandraIndexModel
+		if isRangeTxId(startKey, endKey) {
+			query = query + ` WHERE uuid = ?`
+			hasWhere = true
+			queryArgs = append(queryArgs, genUUIDFromKey(startKey))
+		} else if sKey != nil || eKey != nil {
 			findQuery := `SELECT name, timestamp FROM hlf_index WHERE uuid = ?`
 			startErr := dbInst.cassandra.Query(findQuery, genUUIDFromKey(startKey)).Scan(&startRetrieved.name, &startRetrieved.timestamp)
 			endErr := dbInst.cassandra.Query(findQuery, genUUIDFromKey(endKey)).Scan(&endRetrieved.name, &endRetrieved.timestamp)
@@ -621,4 +625,13 @@ func genUUIDFromKey(key []byte) string {
 	trimKey := bytes.Split(key, TxSuffixSep)[0]
 	uuid := uuid.NewSHA1(namespace, trimKey)
 	return uuid.String()
+}
+
+func isRangeTxId(s []byte, e []byte) bool {
+	prefix := []byte{'t'}
+	suffix := []byte{0xff}
+	if bytes.HasPrefix(s, prefix) && bytes.HasPrefix(e, prefix) && !bytes.HasSuffix(s, suffix) && bytes.HasSuffix(e, suffix) && bytes.Equal(s, e[:len(e)-1]) {
+		return true
+	}
+	return false
 }

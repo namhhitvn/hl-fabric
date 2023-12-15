@@ -450,6 +450,11 @@ func retrieveTxID(encodedTxIDKey []byte) (string, error) {
 }
 
 func retrieveBlockNum(encodedTxIDKey []byte, BlkNumStartingIndex int) (uint64, error) {
+	parts := bytes.Split(encodedTxIDKey, kvdbhelper.TxSuffixSep)
+	if len(parts) == 2 {
+		n, _, err := util.DecodeOrderPreservingVarUint64(parts[1])
+		return n, err
+	}
 	n, _, err := util.DecodeOrderPreservingVarUint64(encodedTxIDKey[BlkNumStartingIndex:])
 	return n, err
 }
