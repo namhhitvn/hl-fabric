@@ -56,10 +56,10 @@ func EncodeOrderPreservingVarUint64(number uint64) []byte {
 // DecodeOrderPreservingVarUint64 decodes the number from the bytes obtained from method 'EncodeOrderPreservingVarUint64'.
 // It returns the decoded number, the number of bytes that are consumed in the process, and an error if the input bytes are invalid.
 func DecodeOrderPreservingVarUint64(target []byte) (uint64, int, error) {
-	isHasPrefixTxIdSep := bytes.HasPrefix(target, kvdbhelper.TxIdSep)
+	isHasPrefixTxIdSep := bytes.HasPrefix(target, kvdbhelper.TxIDIdxKeySep)
 
 	if isHasPrefixTxIdSep {
-		target = bytes.Split(target, kvdbhelper.TxIdSep)[1]
+		target = bytes.Split(target, kvdbhelper.TxIDIdxKeySep)[1]
 	}
 
 	s, numBytes := proto.DecodeVarint(target)
@@ -78,7 +78,7 @@ func DecodeOrderPreservingVarUint64(target []byte) (uint64, int, error) {
 		copy(decodedBytes[8-size:], target[1:size+1])
 		numBytesConsumed := size + 1
 		if isHasPrefixTxIdSep {
-			numBytesConsumed = numBytesConsumed + int(len(kvdbhelper.TxIdSep))
+			numBytesConsumed = numBytesConsumed + int(len(kvdbhelper.TxIDIdxKeySep))
 		}
 		return binary.BigEndian.Uint64(decodedBytes), numBytesConsumed, nil
 	}

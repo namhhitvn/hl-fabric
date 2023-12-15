@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	TxIDIdxKeyPrefix = 't'
 	// internalDBName is used to keep track of data related to internals such as data format
 	// _ is used as name because this is not allowed as a channelname
 	internalDBName = "_"
@@ -22,8 +23,8 @@ const (
 )
 
 var (
+	TxIDIdxKeySep    = []byte{0x16}
 	dbNameKeySep     = []byte{0x00}
-	TxIdSep          = []byte{0x16}
 	lastKeyIndicator = byte(0x01)
 	formatVersionKey = []byte{'f'} // a single key in db whose value indicates the version of the data format
 )

@@ -27,10 +27,18 @@ type dbState int32
 
 type CassandraIndexModel struct {
 	uuid      string
+	name      []byte
 	key       []byte
 	value     []byte
-	name      []byte
+	prefix    []byte
 	timestamp time.Time
+}
+
+func (c CassandraIndexModel) Key() []byte {
+	if c.name != nil && len(c.name) > 0 {
+		return append(append(c.name, dbNameKeySep...), c.key...)
+	}
+	return c.key
 }
 
 const (
@@ -196,8 +204,8 @@ func (dbInst *DB) Get(key []byte) ([]byte, error) {
 	// cassandra
 	if dbInst.cassandra != nil {
 		var retrieved CassandraIndexModel
-		query := `SELECT key, value, timestamp FROM hlf_index WHERE uuid = ?`
-		err = dbInst.cassandra.Query(query, genUUIDFromKey(key)).Scan(&retrieved.key, &retrieved.value, &retrieved.timestamp)
+		query := `SELECT value FROM hlf_index WHERE uuid = ?`
+		err = dbInst.cassandra.Query(query, genUUIDFromKey(key)).Scan(&retrieved.value)
 
 		if err == gocql.ErrNotFound {
 			value = nil
@@ -230,9 +238,10 @@ func (dbInst *DB) Put(key []byte, value []byte, sync bool) error {
 
 	// cassandra
 	if dbInst.cassandra != nil {
-		query := `INSERT INTO hlf_index (uuid, key, value, timestamp, name) VALUES (?, ?, ?, ?, ?)`
-		// fmt.Println(fmt.Sprintf(`[MYDEBUG] Put -> key="%s" uuid="%s"`, string(key), genUUIDFromKey(key)))
-		err = dbInst.cassandra.Query(query, genUUIDFromKey(key), key, value, time.Now(), string(GetDBName(key))).Exec()
+		model := newCassandraIndexModel(key, value)
+		query := `INSERT INTO hlf_index (uuid, name, key, prefix, value, timestamp) VALUES (?, ?, ?, ?, ?, ?)`
+		// fmt.Println(fmt.Sprintf(`[MYDEBUG] Put -> name="%s" key="%s" uuid="%s"`, string(model.name), string(model.key), model.uuid))
+		err = dbInst.cassandra.Query(query, model.uuid, model.name, model.key, model.prefix, model.value, model.timestamp).Exec()
 		if err != nil {
 			logger.Errorf("Error writing cassandra key [%#v]", key)
 			err = errors.Wrapf(err, "error writing cassandra key [%#v]", key)
@@ -290,7 +299,7 @@ func (dbInst *DB) GetIterator(startKey []byte, endKey []byte, args ...[]byte) it
 		var startRetrieved CassandraIndexModel
 		var endRetrieved CassandraIndexModel
 
-		query := `SELECT key, value FROM hlf_index`
+		query := `SELECT name, key, value FROM hlf_index`
 		hasWhere := false
 		hasWhereDBName := false
 
@@ -306,16 +315,22 @@ func (dbInst *DB) GetIterator(startKey []byte, endKey []byte, args ...[]byte) it
 			}
 		}
 
-		if isRangeTxId(startKey, endKey) {
+		if bytes.Equal(sKey, []byte{TxIDIdxKeyPrefix}) && bytes.Equal(eKey, []byte{TxIDIdxKeyPrefix + 1}) { // is searching all transaction
+			query = query + ` WHERE prefix = ?`
+			hasWhere = true
+			queryArgs = append(queryArgs, []byte{TxIDIdxKeyPrefix})
+		} else if isRangeTxId(startKey, endKey) { // is searching special transaction
 			query = query + ` WHERE uuid = ?`
 			hasWhere = true
 			queryArgs = append(queryArgs, genUUIDFromKey(startKey))
-		} else if sKey != nil || eKey != nil {
+		} else if sKey != nil || eKey != nil { // is searching range inserted
 			findQuery := `SELECT name, timestamp FROM hlf_index WHERE uuid = ?`
 			startErr := dbInst.cassandra.Query(findQuery, genUUIDFromKey(startKey)).Scan(&startRetrieved.name, &startRetrieved.timestamp)
 			endErr := dbInst.cassandra.Query(findQuery, genUUIDFromKey(endKey)).Scan(&endRetrieved.name, &endRetrieved.timestamp)
 
-			// fmt.Println(fmt.Sprintf(`[MYDEBUG] GetIterator -> sKey="%s" eKey="%s" --- suuid="%s" euuid="%s"`, string(startKey), string(endKey), genUUIDFromKey(startKey), genUUIDFromKey(endKey)))
+			// sModel := newCassandraIndexModel(startKey, []byte{})
+			// eModel := newCassandraIndexModel(endKey, []byte{})
+			// fmt.Println(fmt.Sprintf(`[MYDEBUG] GetIterator -> name="%s"\nsKey="%s" sUuid="%s"\neKey="%s" eUuid="%s"`, string(sModel.name), string(sModel.key), sModel.uuid, string(eModel.key), eModel.uuid))
 
 			if startErr == nil {
 				query = query + " WHERE timestamp >= ?"
@@ -466,9 +481,10 @@ type CassandraBatch struct {
 }
 
 func (b *CassandraBatch) Put(key, value []byte) {
-	query := `INSERT INTO hlf_index (uuid, key, value, timestamp, name) VALUES (?, ?, ?, ?, ?)`
-	// fmt.Println(fmt.Sprintf(`[MYDEBUG] Put(Batch) -> key="%s" uuid="%s"`, string(key), genUUIDFromKey(key)))
-	err := b.session.Query(query, genUUIDFromKey(key), key, value, time.Now(), string(GetDBName(key))).Exec()
+	model := newCassandraIndexModel(key, value)
+	query := `INSERT INTO hlf_index (uuid, name, key, prefix, value, timestamp) VALUES (?, ?, ?, ?, ?, ?)`
+	// fmt.Println(fmt.Sprintf(`[MYDEBUG] Put(Batch) -> name="%s" key="%s" uuid="%s"`, string(model.name), string(model.key), model.uuid))
+	err := b.session.Query(query, model.uuid, model.name, model.key, model.prefix, model.value, model.timestamp).Exec()
 	if err != nil {
 		logger.Errorf("Error batch writing cassandra key [%#v]", key)
 	}
@@ -494,11 +510,11 @@ func (ia *CassandraIteratorArray) Len() int {
 func (ia *CassandraIteratorArray) Search(key []byte) int {
 	def := -1
 	for i, value := range ia.rows {
-		if bytes.Equal(value.key, key) || bytes.Compare(value.key, key) > 0 {
+		if bytes.Equal(value.Key(), key) || bytes.Compare(value.Key(), key) > 0 {
 			return i
 		}
 	}
-	if def == -1 && bytes.Compare(ia.rows[len(ia.rows)-1].key, key) < 0 {
+	if def == -1 && bytes.Compare(ia.rows[len(ia.rows)-1].Key(), key) < 0 {
 		def = len(ia.rows)
 	}
 	return def
@@ -509,7 +525,7 @@ func (ia *CassandraIteratorArray) Index(i int) (key, value []byte) {
 		panic(ErrCassandraIterIndexRange)
 	}
 	row := ia.rows[i]
-	return row.key, row.value
+	return row.Key(), row.value
 }
 
 func NewCassandraIteratorArray(iter *gocql.Iter) *CassandraIteratorArray {
@@ -519,7 +535,7 @@ func NewCassandraIteratorArray(iter *gocql.Iter) *CassandraIteratorArray {
 
 	for scanner.Next() {
 		var retrieved CassandraIndexModel
-		err := scanner.Scan(&retrieved.key, &retrieved.value)
+		err := scanner.Scan(&retrieved.name, &retrieved.key, &retrieved.value)
 		if err == gocql.ErrNotFound {
 			break
 		} else if err != nil {
@@ -622,16 +638,39 @@ func GetDBName(key []byte) []byte {
 var namespace = uuid.UUID{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}
 
 func genUUIDFromKey(key []byte) string {
-	trimKey := bytes.Split(key, TxIdSep)[0]
+	trimKey := bytes.Split(key, TxIDIdxKeySep)[0]
 	uuid := uuid.NewSHA1(namespace, trimKey)
 	return uuid.String()
 }
 
 func isRangeTxId(s []byte, e []byte) bool {
-	prefix := []byte{'t'}
+	prefix := []byte{TxIDIdxKeyPrefix}
 	suffix := []byte{0xff}
 	if bytes.HasPrefix(s, prefix) && bytes.HasPrefix(e, prefix) && !bytes.HasSuffix(s, suffix) && bytes.HasSuffix(e, suffix) && bytes.Equal(s, e[:len(e)-1]) {
 		return true
 	}
 	return false
+}
+
+func newCassandraIndexModel(key []byte, value []byte) *CassandraIndexModel {
+	var dbKey []byte = key
+	var prefix []byte
+
+	dbNameLength := bytes.Index(key, dbNameKeySep)
+	if dbNameLength != -1 {
+		dbKey = key[dbNameLength+1:]
+	}
+
+	if dbKey != nil && len(dbKey) > 0 {
+		prefix = dbKey[:1]
+	}
+
+	return &CassandraIndexModel{
+		uuid:      genUUIDFromKey(key),
+		name:      GetDBName(key),
+		key:       dbKey,
+		value:     value,
+		prefix:    prefix,
+		timestamp: time.Now(),
+	}
 }
