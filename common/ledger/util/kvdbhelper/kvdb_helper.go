@@ -382,12 +382,15 @@ func (dbInst *DB) WriteBatch(batch *leveldb.Batch, sync bool) error {
 	if dbInst.cassandra != nil {
 		if dbInst.dbState == closed || batch == nil || batch.Len() == 0 {
 			logger.Errorf("Error writing batch cassandra")
-			err = errors.Wrapf(err, "error writing batch cassandra")
+			err = errors.New("Error writing batch cassandra")
+			return err
 		}
 
-		batch.Replay(&CassandraBatch{
+		if err = batch.Replay(&CassandraBatch{
 			session: dbInst.cassandra,
-		})
+		}); err != nil {
+			err = errors.Wrapf(err, "Error writing batch cassandra")
+		}
 	}
 
 	return err
