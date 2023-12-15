@@ -643,12 +643,19 @@ func genUUIDFromKey(key []byte) string {
 	return uuid.String()
 }
 
-func isRangeTxId(s []byte, e []byte) bool {
+func isRangeTxId(sKey []byte, eKey []byte) bool {
 	prefix := []byte{TxIDIdxKeyPrefix}
 	suffix := []byte{0xff}
-	if bytes.HasPrefix(s, prefix) && bytes.HasPrefix(e, prefix) && !bytes.HasSuffix(s, suffix) && bytes.HasSuffix(e, suffix) && bytes.Equal(s, e[:len(e)-1]) {
+	sModel := newCassandraIndexModel(sKey, []byte{})
+	eModel := newCassandraIndexModel(eKey, []byte{})
+
+	if bytes.Equal(sModel.prefix, prefix) &&
+		bytes.Equal(eModel.prefix, prefix) &&
+		bytes.Index(sModel.key, suffix) == -1 &&
+		(bytes.Equal(sModel.key, eModel.key) || (bytes.Index(eModel.key, suffix) > 0 && bytes.Equal(sModel.key, eModel.key[:bytes.Index(eModel.key, suffix)]))) {
 		return true
 	}
+
 	return false
 }
 
