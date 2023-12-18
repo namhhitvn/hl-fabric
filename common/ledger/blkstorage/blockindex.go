@@ -422,7 +422,7 @@ func constructTxIDKey(txID string, blkNum, txNum uint64) []byte {
 		util.EncodeOrderPreservingVarUint64(uint64(len(txID)))...,
 	)
 	k = append(k, txID...)
-	k = append(k, kvdbhelper.TxSuffixSep...)
+	k = append(k, kvdbhelper.TxIDIdxKeySep...)
 	k = append(k, util.EncodeOrderPreservingVarUint64(blkNum)...)
 	return append(k, util.EncodeOrderPreservingVarUint64(txNum)...)
 }
