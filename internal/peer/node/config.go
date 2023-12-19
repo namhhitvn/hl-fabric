@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	coreconfig "github.com/hyperledger/fabric/core/config"
 	"github.com/hyperledger/fabric/core/ledger"
 	"github.com/spf13/viper"
@@ -76,19 +77,6 @@ func ledgerConfig() *ledger.Config {
 		SnapshotsConfig: &ledger.SnapshotsConfig{
 			RootDir: snapshotsRootDir,
 		},
-		KeyValueDBConfig: &ledger.KeyValueDBConfig{
-			KeyValueDatabase: KeyValueDatabase,
-		},
-	}
-
-	if conf.KeyValueDBConfig.KeyValueDatabase == ledger.CassandraDB {
-		conf.KeyValueDBConfig.CassandraDB = &ledger.CassandraDBConfig{
-			Hosts:    viper.GetStringSlice("ledger.keyValueDBConfig.cassandraDBConfig.hosts"),
-			Keyspace: viper.GetString("ledger.keyValueDBConfig.cassandraDBConfig.keyspace"),
-			// TODO: namhhitvn - mapping all cassandra db configs
-		}
-	} else {
-		conf.KeyValueDBConfig.KeyValueDatabase = ledger.GoLevelDB
 	}
 
 	if conf.StateDBConfig.StateDatabase == ledger.CouchDB {
@@ -106,5 +94,17 @@ func ledgerConfig() *ledger.Config {
 			UserCacheSizeMBs:      viper.GetInt("ledger.state.couchDBConfig.cacheSize"),
 		}
 	}
+
+	if KeyValueDatabase == ledger.CassandraDB {
+		kvdbhelper.GlobalKeyValueDBConfig.KeyValueDatabase = ledger.CassandraDB
+		kvdbhelper.GlobalKeyValueDBConfig.CassandraDB = &ledger.CassandraDBConfig{
+			Hosts:    viper.GetStringSlice("ledger.keyValueDBConfig.cassandraDBConfig.hosts"),
+			Keyspace: viper.GetString("ledger.keyValueDBConfig.cassandraDBConfig.keyspace"),
+			// TODO: namhhitvn - mapping all cassandra db configs
+		}
+	} else {
+		kvdbhelper.GlobalKeyValueDBConfig.KeyValueDatabase = ledger.GoLevelDB
+	}
+
 	return conf
 }

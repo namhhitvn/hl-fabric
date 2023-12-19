@@ -24,9 +24,9 @@ import (
 )
 
 const (
-	GoLevelDB = "goleveldb"
-	CouchDB   = "CouchDB"
-	CassandraDB   = "CassandraDB"
+	GoLevelDB   = "goleveldb"
+	CouchDB     = "CouchDB"
+	CassandraDB = "CassandraDB"
 )
 
 // Initializer encapsulates dependencies for PeerLedgerProvider
@@ -54,8 +54,6 @@ type Config struct {
 	HistoryDBConfig *HistoryDBConfig
 	// SnapshotsConfig holds the configuration parameters for the snapshots.
 	SnapshotsConfig *SnapshotsConfig
-	// KeyValueDBConfig holds the configuration parameters for key value storage for the ledger.
-	KeyValueDBConfig *KeyValueDBConfig
 }
 
 // KeyValueDBConfig is a structure used to configure the key value storage for the ledger.

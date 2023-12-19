@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/hyperledger/fabric/common/ledger/dataformat"
-	"github.com/hyperledger/fabric/core/ledger"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
@@ -40,10 +39,9 @@ type closeFunc func()
 // of the formatVersionKey is equal to `ExpectedFormat`. Otherwise, an error is returned.
 // A nil value for ExpectedFormat indicates that the format is never set and hence there is no such record.
 type Conf struct {
-	DBPath           string
-	ExpectedFormat   string
-	KeyValueDBConfig *ledger.KeyValueDBConfig
-	IsTestCleanup    bool
+	DBPath         string
+	ExpectedFormat string
+	IsTestCleanup  bool
 }
 
 // Provider enables to use a single leveldb as multiple logical leveldbs

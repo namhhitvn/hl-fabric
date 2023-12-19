@@ -63,9 +63,8 @@ type BlockStoreProvider struct {
 // NewProvider constructs a filesystem based block store provider
 func NewProvider(conf *Conf, indexConfig *IndexConfig, metricsProvider metrics.Provider) (*BlockStoreProvider, error) {
 	dbConf := &kvdbhelper.Conf{
-		DBPath:           conf.getIndexDir(),
-		ExpectedFormat:   dataFormatVersion(indexConfig),
-		KeyValueDBConfig: conf.keyValueDBConfig,
+		DBPath:         conf.getIndexDir(),
+		ExpectedFormat: dataFormatVersion(indexConfig),
 	}
 
 	p, err := kvdbhelper.NewProvider(dbConf)
