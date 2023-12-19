@@ -69,7 +69,7 @@ func TestMultipleBlockStores(t *testing.T) {
 	newenv := newTestEnv(t, NewConf(tempdir, 0))
 	newprovider := newenv.provider
 	defer newprovider.Close()
-	defer env.Cleanup()
+	defer newenv.Cleanup()
 
 	subdirs, err = newprovider.List()
 	require.NoError(t, err)
