@@ -221,6 +221,8 @@ func (dbInst *DB) Get(key []byte) ([]byte, error) {
 
 		var retrieved CassandraIndexModel
 		query := fmt.Sprintf(`SELECT value FROM kv_%s WHERE uuid = ?`, dbInst.name)
+		// DEBUG: logging debugger
+		// fmt.Println(fmt.Sprintf(`[KVDB_OPERATOR] Get -> query="%s"; key="%s"; uuid="%s"`, query, key, genUUIDFromKey(key)))
 		err = dbInst.cassandra.Query(query, genUUIDFromKey(key)).Scan(&retrieved.value)
 
 		if err == gocql.ErrNotFound {
@@ -255,7 +257,8 @@ func (dbInst *DB) Put(key []byte, value []byte, sync bool) error {
 
 		model := newCassandraIndexModel(key, value)
 		query := fmt.Sprintf(`INSERT INTO kv_%s (uuid, name, key, prefix, value, timestamp) VALUES (?, ?, ?, ?, ?, ?)`, dbInst.name)
-		// fmt.Println(fmt.Sprintf(`[MYDEBUG] Put -> name="%s" key="%s" uuid="%s"`, string(model.name), string(model.key), model.uuid))
+		// DEBUG: logging debugger
+		// fmt.Println(fmt.Sprintf(`[KVDB_OPERATOR] Put -> name="%s"; key="%s"; uuid="%s"`, string(model.name), string(model.key), model.uuid))
 		err = dbInst.cassandra.Query(query, model.uuid, model.name, model.key, model.prefix, model.value, model.timestamp).Exec()
 		if err != nil {
 			logger.Errorf("Error writing cassandra key [%#v]", key)
@@ -275,8 +278,11 @@ func (dbInst *DB) Delete(key []byte, sync bool) error {
 	err = dbInst.leveldb.Delete(key, sync)
 
 	if dbInst.cassandra != nil {
+		model := newCassandraIndexModel(key, []byte{})
 		query := fmt.Sprintf(`DELETE FROM kv_%s WHERE uuid = ?`, dbInst.name)
-		err := dbInst.cassandra.Query(query, genUUIDFromKey(key)).Exec()
+		// DEBUG: logging debugger
+		// fmt.Println(fmt.Sprintf(`[KVDB_OPERATOR] Delete -> query="%s"; name="%s"; key="%s"; uuid="%s"`, query, string(model.name), string(model.key), model.uuid))
+		err := dbInst.cassandra.Query(query, model.uuid).Exec()
 		if err != nil {
 			logger.Errorf("Error deleting cassandra key [%#v]", key)
 			err = errors.Wrapf(err, "error deleting cassandra key [%#v]", key)
@@ -336,9 +342,12 @@ func (dbInst *DB) GetIterator(startKey []byte, endKey []byte, args ...[]byte) it
 			startErr := dbInst.cassandra.Query(findQuery, genUUIDFromKey(startKey)).Scan(&startRetrieved.name, &startRetrieved.timestamp)
 			endErr := dbInst.cassandra.Query(findQuery, genUUIDFromKey(endKey)).Scan(&endRetrieved.name, &endRetrieved.timestamp)
 
+			// DEBUG: logging debugger
 			// sModel := newCassandraIndexModel(startKey, []byte{})
+			// DEBUG: logging debugger
 			// eModel := newCassandraIndexModel(endKey, []byte{})
-			// fmt.Println(fmt.Sprintf(`[MYDEBUG] GetIterator -> name="%s"\nsKey="%s" sUuid="%s"\neKey="%s" eUuid="%s"`, string(sModel.name), string(sModel.key), sModel.uuid, string(eModel.key), eModel.uuid))
+			// DEBUG: logging debugger
+			// fmt.Println(fmt.Sprintf(`[KVDB_OPERATOR] GetIterator -> name="%s"; sKey="%s" sUuid="%s"; eKey="%s" eUuid="%s"`, string(sModel.name), string(sModel.key), sModel.uuid, string(eModel.key), eModel.uuid))
 
 			if startErr == nil {
 				query = query + " WHERE timestamp >= ?"
@@ -390,6 +399,17 @@ func (dbInst *DB) GetIterator(startKey []byte, endKey []byte, args ...[]byte) it
 
 		query = query + " ALLOW FILTERING"
 		iter = NewCassandraIterator(dbInst.cassandra.Query(query, queryArgs...).Iter())
+
+		// DEBUG: logging debugger
+		// debugMsg := fmt.Sprintf(`[KVDB_OPERATOR] GetIterator -> query="%s"`, query)
+		// DEBUG: logging debugger
+		// for i, val := range queryArgs {
+		// DEBUG: logging debugger
+		// debugMsg = debugMsg + fmt.Sprintf(`; queryArgs[%d]="%s"`, i, val)
+		// DEBUG: logging debugger
+		// }
+		// DEBUG: logging debugger
+		// fmt.Println(debugMsg)
 	} else {
 		iter = dbInst.leveldb.DB.NewIterator(&goleveldbUtil.Range{Start: startKey, Limit: endKey}, dbInst.readOpts)
 	}
@@ -498,7 +518,8 @@ type CassandraBatch struct {
 func (b *CassandraBatch) Put(key, value []byte) {
 	model := newCassandraIndexModel(key, value)
 	query := fmt.Sprintf(`INSERT INTO kv_%s (uuid, name, key, prefix, value, timestamp) VALUES (?, ?, ?, ?, ?, ?)`, b.name)
-	// fmt.Println(fmt.Sprintf(`[MYDEBUG] Put(Batch) -> name="%s" key="%s" uuid="%s"`, string(model.name), string(model.key), model.uuid))
+	// DEBUG: logging debugger
+	// fmt.Println(fmt.Sprintf(`[KVDB_OPERATOR] Put(Batch) -> query="%s"; name="%s"; key="%s"; uuid="%s"`, query, string(model.name), string(model.key), model.uuid))
 	err := b.leveldb.Put(key, value, false)
 	err = b.session.Query(query, model.uuid, model.name, model.key, model.prefix, model.value, model.timestamp).Exec()
 	if err != nil {
@@ -507,9 +528,12 @@ func (b *CassandraBatch) Put(key, value []byte) {
 }
 
 func (b *CassandraBatch) Delete(key []byte) {
+	model := newCassandraIndexModel(key, []byte{})
 	query := fmt.Sprintf(`DELETE FROM kv_%s WHERE uuid = ?`, b.name)
+	// DEBUG: logging debugger
+	// fmt.Println(fmt.Sprintf(`[KVDB_OPERATOR] Delete(Batch) -> query="%s"; name="%s"; key="%s"; uuid="%s"`, query, string(model.name), string(model.key), model.uuid))
 	err := b.leveldb.Delete(key, false)
-	err = b.session.Query(query, genUUIDFromKey(key)).Exec()
+	err = b.session.Query(query, model.uuid).Exec()
 	if err != nil {
 		logger.Errorf("Error batch deleting cassandra key [%#v]", key)
 	}

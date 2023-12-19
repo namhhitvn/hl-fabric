@@ -13,6 +13,7 @@ import (
 	"path"
 	"strconv"
 
+	"github.com/hyperledger/fabric/common/ledger/util/kvdbhelper"
 	"github.com/hyperledger/fabric/internal/fileutil"
 )
 
@@ -57,6 +58,7 @@ func DeleteBlockStoreIndex(blockStorageDir string) error {
 	conf := &Conf{blockStorageDir: blockStorageDir}
 	indexDir := conf.getIndexDir()
 	logger.Infof("Dropping all contents under the index dir [%s]... if present", indexDir)
+	kvdbhelper.CreateDB(&kvdbhelper.Conf{DBPath: indexDir}).Truncate()
 	return fileutil.RemoveContents(indexDir)
 }
 
