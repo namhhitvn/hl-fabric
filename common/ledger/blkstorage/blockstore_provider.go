@@ -151,6 +151,10 @@ func (p *BlockStoreProvider) Close() {
 	p.leveldbProvider.Close()
 }
 
+func (p *BlockStoreProvider) GetDBProvider() *kvdbhelper.Provider {
+	return p.leveldbProvider
+}
+
 func dataFormatVersion(indexConfig *IndexConfig) string {
 	// in version 2.0 we merged three indexable into one `IndexableAttrTxID`
 	if indexConfig.Contains(IndexableAttrTxID) {

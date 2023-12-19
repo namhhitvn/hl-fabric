@@ -414,7 +414,7 @@ func TestBootstrapFromSnapshotErrorPaths(t *testing.T) {
 			env = newTestEnv(t, NewConf(testPath, 0))
 		}()
 		err := env.provider.ImportFromSnapshot(ledgerID, snapshotDir, snapshotInfo)
-		require.Contains(t, err.Error(), "error writing batch to leveldb")
+		require.Contains(t, err.Error(), "Error writing batch cassandra")
 	})
 
 	t.Run("bootstrappedsnapshotInfo-file-corrupt", func(t *testing.T) {

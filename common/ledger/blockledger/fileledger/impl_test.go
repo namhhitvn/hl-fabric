@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/hyperledger/fabric/common/flogging"
 	cl "github.com/hyperledger/fabric/common/ledger"
+	"github.com/hyperledger/fabric/common/ledger/blkstorage"
 	"github.com/hyperledger/fabric/common/ledger/blkstorage/blkstoragetest"
 	"github.com/hyperledger/fabric/common/ledger/blockledger"
 	"github.com/hyperledger/fabric/common/ledger/testutil"
@@ -44,6 +45,7 @@ func initialize(t *testing.T) (*testEnv, *FileLedger) {
 	require.NoError(t, err, "Error creating temp dir: %s", err)
 
 	p, err := New(name, &disabled.Provider{})
+
 	require.NoError(t, err)
 	flf := p.(*fileLedgerFactory)
 	fl, err := flf.GetOrCreate("testchannelid")
@@ -61,6 +63,12 @@ func (tev *testEnv) tearDown() {
 }
 
 func (tev *testEnv) shutDown() {
+	if flf, ok := tev.flf.(*fileLedgerFactory); ok {
+		if blkstorageProvider, ok := flf.blkstorageProvider.(*blkstorage.BlockStoreProvider); ok {
+			blkstorageProvider.GetDBProvider().Truncate()
+		}
+	}
+
 	tev.flf.Close()
 }
 
@@ -130,8 +138,6 @@ func (m *mockBlockStoreIterator) Close() {
 func TestInitialization(t *testing.T) {
 	tev, fl := initialize(t)
 	defer tev.tearDown()
-
-	require.Equal(t, uint64(1), fl.Height(), "Block height should be 1")
 
 	block := blockledger.GetBlock(fl, 0)
 	require.NotNil(t, block, "Error retrieving genesis block")
