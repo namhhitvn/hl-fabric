@@ -98,6 +98,10 @@ func (f *fileLedgerFactory) Close() {
 	f.blkstorageProvider.Close()
 }
 
+func (f *fileLedgerFactory) GetBlockStoreProvider() blockStoreProvider {
+	return f.blkstorageProvider
+}
+
 // New creates a new ledger factory
 func New(directory string, metricsProvider metrics.Provider) (blockledger.Factory, error) {
 	p, err := blkstorage.NewProvider(
@@ -107,6 +111,7 @@ func New(directory string, metricsProvider metrics.Provider) (blockledger.Factor
 		},
 		metricsProvider,
 	)
+
 	if err != nil {
 		return nil, err
 	}
